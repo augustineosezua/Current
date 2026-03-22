@@ -1,0 +1,26 @@
+{
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express-session": "^1.18.2",
+    "@types/pg": "^8.20.0",
+    "better-auth": "^1.5.5",
+    "express-session": "^1.19.0",
+    "nodemon": "^3.1.14",
+    "prisma": "^7.5.0",
+    "tsx": "^4.19.3"
+  },
+  "type": "module",
+  "dependencies": {
+    "@better-auth/prisma-adapter": "^1.5.5",
+    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.5.0",
+    "@prisma/extension-accelerate": "^3.0.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "pg": "^8.20.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts"
+  }
+}
