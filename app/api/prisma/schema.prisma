@@ -22,6 +22,12 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  bankAccounts  bankAccounts[]
+  plaidUser    plaidUser?
+  transactions   Transaction[]
+  bills          bills[]
+  userSettings   userSettings?
+  budgetPeriods   budgetPeriod[]
 
   @@unique([email])
   @@map("user")
@@ -73,4 +79,122 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model plaidUser{
+  id String @id
+  userId    String @unique
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plaidUserId String
+  plaidAccessToken String
+  plaidItemId String
+  institutionName String
+  needsReAuth Boolean @default(false)
+  lastSyncedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bankAccounts bankAccounts[]
+
+
+  @@map("plaid_user")
+}
+
+model bankAccounts{
+  id String @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plaidAccountId String @unique
+  plaidUserId String
+  plaidUser plaidUser @relation(fields: [plaidUserId], references: [id], onDelete: Cascade)
+  accountName String
+  accountType String
+  accountSubType String
+  institutionName String
+  institutionId String
+  linkedAt DateTime @default(now())
+  lastSyncedAt DateTime?
+  isActive Boolean @default(true)
+  currentBalance Decimal
+  availableBalance Decimal
+  accountCategory String
+  currency String
+  includeInCalculations Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  transactions Transaction[]
+  
+  @@map("bank_accounts")
+}
+
+model Transaction {
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId String
+  account bankAccounts @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  plaidTransactionId String @unique
+  amount Decimal
+  date DateTime
+  mechantName String?
+  category String[]
+  transactionType String
+  TransferPairId String?
+  isSavingsContribution Boolean @default(false)
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bill bills?
+
+  @@map("transaction")
+}
+
+model bills{
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billName String
+  amount Decimal
+  dueDate DateTime
+  isReccuring Boolean @default(false)
+  frequency String?
+  isPaid Boolean @default(false)
+  transactionId String? @unique
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("bills")
+}
+
+model userSettings{
+  id String @id
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme String @default("light")
+  notificationsEnabled Boolean @default(true)
+  monthlySavingsGoal Decimal @default(0)
+  paychequeAmount Decimal @default(0)
+  paychequeFrequency String @default("biweekly")
+  nextPaychequeDate DateTime?
+  safeToSpendPeriod String @default("weekly")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+model budgetPeriod {
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate DateTime
+  endDate DateTime
+  totalIncome Decimal
+  totalSpent Decimal
+  totalSaved Decimal
+  safeToSpendSnapshot Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("budget_period")
 }
