@@ -88,12 +88,12 @@ model plaidUser{
   plaidUserId String
   plaidAccessToken String
   plaidItemId String
-  institutionName String
   needsReAuth Boolean @default(false)
-  lastSyncedAt DateTime?
+  lastSyncedAt DateTime? @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   bankAccounts bankAccounts[]
+  cursor String?
 
 
   @@map("plaid_user")
@@ -121,7 +121,6 @@ model bankAccounts{
   includeInCalculations Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  transactions Transaction[]
   
   @@map("bank_accounts")
 }
@@ -130,8 +129,6 @@ model Transaction {
   id String @id
   userId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountId String
-  account bankAccounts @relation(fields: [accountId], references: [id], onDelete: Cascade)
   plaidTransactionId String @unique
   amount Decimal
   date DateTime

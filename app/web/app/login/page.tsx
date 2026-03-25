@@ -8,7 +8,7 @@ export default function LoginPage() {
   
 
   return (
-    <div className="max-w-xs mx-auto mt-24 flex flex-col gap-6 text-black">
+    <div className="max-w-xs mx-auto mt-24 flex flex-col gap-6 text-white">
       <h1 className="text-2xl font-semibold">Login</h1>
       <form
         onSubmit={async (e) => {
