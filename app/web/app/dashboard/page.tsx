@@ -7,11 +7,27 @@ import {
   PlaidLinkOptions,
   PlaidLinkOnSuccess,
 } from "react-plaid-link";
+import InfoPopup from "./helpers/info-popup";
+
+import { User, Info } from "lucide-react";
 
 export default function Dashboard() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
-  const [linkToken, setLinkToken] = useState<string | null>(null)
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+
+  //dashboard states
+  const [saveToSpend, setSaveToSpend] = useState({
+    until: "April 2nd",
+    amount: 300.25,
+    message: "You can spend confidently today.",
+  });
+
+  //safe-to-spend info popup controllers
+  const [showInfoPopup, setShowInfoPopup] = useState(false);
+  const toggleInfoPopup = () => {
+    setShowInfoPopup((prev) => !prev);
+  };
 
   const { open, ready } = usePlaidLink({
     token: linkToken,
@@ -130,21 +146,43 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="bg-white flex justify-between text-black h-screen w-screen flex-col">
-      <div className="w-full flex justify-between px-4 pt-2">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <button
-          className="bg-blue-500 hover:bg-blue-700 h-12 text-white font-bold py-2 px-4 rounded"
-          onClick={(e) => {
-            e.preventDefault();
-            signOut({ fetchOptions: { onSuccess: () => router.push("/") } });
-          }}
-        >
-          Log Out
-        </button>
+    <div className="bg-[#111125] flex items-center text-[#5EB3FF] h-screen w-screen flex-col font-bold">
+      {showInfoPopup && <InfoPopup props={{ exit: toggleInfoPopup }} />}
+
+      {/**header */}
+      <div className="w-full flex justify-between items-center px-6 py-2 pt-2 border-b border-[#16213E]">
+        <h1 className="text-3xl font-bold cursor-default">Currrent</h1>
+        <User className="h-6 w-6 hover:cursor-pointer" />
       </div>
+      
       <div className="h-2"></div>
-      <div className="w-full h-full bg-gray-700"></div>
+
+      {/**hero section */}
+      <div className="flex justify-center h-full w-250 max-w-screen pt-10">
+        <div className="w-96 h-24 items-center flex-col justify-center">
+          <div className="flex w-full justify-center">
+            <h4 className="text-[#ffffff]">
+              Safe-To-Spend until {saveToSpend.until}
+            </h4>
+          </div>
+          <div className="flex w-full justify-center py-4 items-center gap-2">
+            <div>
+              <h1 className="text-[#5EB3FF] text-7xl">
+                ${saveToSpend.amount.toFixed(2)}
+              </h1>
+            </div>
+            <div>
+              <Info
+                className="h-6 w-6 text-[#5EB3FF] hover:cursor-pointer"
+                onClick={toggleInfoPopup}
+              />
+            </div>
+          </div>
+          <div className="flex w-full justify-center ">
+            <p className="text-[#ffffff]">{saveToSpend.message}</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

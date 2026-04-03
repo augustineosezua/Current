@@ -10,47 +10,70 @@ const prisma = new PrismaClient({
 }).$extends(withAccelerate());
 
 router.post("/api/create-link-token", async (req, res) => {
-  const userId = req.body.userId;
-  if (!userId) {
-    return res.status(400).json({ error: "User Must Be Signed In" });
+  try {
+    const userId = req.body.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "User Must Be Signed In" });
+    }
+
+    const response = await plaidClient.linkTokenCreate({
+      user: { client_user_id: userId },
+      client_name: "Current",
+      products: [Products.Transactions],
+      country_codes: [CountryCode.Ca],
+      language: "en",
+    });
+
+    return res.json(response.data);
+  } catch (error) {
+    return res.status(500).json({
+      error: "Error creating link token",
+      errorDetails: error instanceof Error ? error.message : error,
+    });
   }
-
-  const response = await plaidClient.linkTokenCreate({
-    user: { client_user_id: userId },
-    client_name: "Current",
-    products: [Products.Transactions],
-    country_codes: [CountryCode.Ca],
-    language: "en",
-  });
-
-  res.json(response.data);
 });
 
 router.post("/api/exchange-public-token", async (req, res) => {
-  const publicToken = req.body.publicToken;
+  try {
+    const publicToken = req.body.publicToken;
+    const userId = req.body.userId;
 
-  const response = await plaidClient.itemPublicTokenExchange({
-    public_token: publicToken,
-  });
+    if (!userId) {
+      return res.status(400).json({ error: "User Must Be Signed In" });
+    }
 
-  const { access_token, item_id } = response.data;
-  const newPlaidUser = await prisma.plaidUser.create({
-    data: {
-      id: crypto.randomUUID(),
-      plaidAccessToken: access_token,
-      plaidItemId: item_id,
-      plaidUserId: req.body.userId, // Add the required plaidUserId
-      user: {
-        connect: { id: req.body.userId },
+    if (!publicToken) {
+      return res.status(400).json({ error: "Public token is required" });
+    }
+
+    const response = await plaidClient.itemPublicTokenExchange({
+      public_token: publicToken,
+    });
+
+    const { access_token, item_id } = response.data;
+    await prisma.plaidUser.create({
+      data: {
+        id: crypto.randomUUID(),
+        plaidAccessToken: access_token,
+        plaidItemId: item_id,
+        plaidUserId: userId,
+        user: {
+          connect: { id: userId },
+        },
       },
-    },
-  });
+    });
 
-  const bankAccountData = await getBankAccounts(access_token);
-  await setBankAccounts(req.body.userId, bankAccountData);
-  await setPlaidTransactions(access_token, req.body.userId);
+    const bankAccountData = await getBankAccounts(access_token);
+    await setBankAccounts(userId, bankAccountData);
+    await setPlaidTransactions(access_token, userId);
 
-  res.json({ success: true });
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Error exchanging public token",
+      errorDetails: error instanceof Error ? error.message : error,
+    });
+  }
 });
 
 async function getBankAccounts(acessToken: string) {
@@ -79,7 +102,6 @@ async function setBankAccounts(userId: string, data: any) {
       where: { plaidAccountId: account.account_id },
       update: {},
       create: {
-        id: crypto.randomUUID(),
         userId: userId,
         plaidAccountId: account.account_id,
         plaidUserId: plaidUser.id,
@@ -115,6 +137,7 @@ async function setPlaidTransactions(accessToken: string, userId: string) {
       await prisma.transaction.upsert({
         where: { plaidTransactionId: transaction.transaction_id },
         update: {
+          accountId: transaction.account_id,
           amount: transaction.amount,
           date: new Date(transaction.date),
           mechantName: transaction.merchant_name ?? null,
@@ -122,6 +145,7 @@ async function setPlaidTransactions(accessToken: string, userId: string) {
           transactionType: transaction.payment_channel,
         },
         create: {
+          accountId: transaction.account_id,
           id: crypto.randomUUID(),
           userId,
           plaidTransactionId: transaction.transaction_id,

@@ -1,5 +1,4 @@
-import express, { response } from "express";
-import { plaidClient } from "../lib/plaid";
+import express from "express";
 import { PrismaClient } from "../generated/prisma/client";
 import { withAccelerate } from "@prisma/extension-accelerate";
 
@@ -10,45 +9,141 @@ const prisma = new PrismaClient({
 
 //checks if plaidUser already exists
 router.post("/api/check-plaid-user", async (req, res) => {
-  const userId = req.body.userId;
-  const plaidUser = await prisma.plaidUser.findUnique({
-    where: {
-      userId: userId,
-    },
-  });
-  res.json({ exists: !!plaidUser });
+  try {
+    const userId = req.body.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "User Must Be Signed In" });
+    }
+
+    const plaidUser = await prisma.plaidUser.findUnique({
+      where: {
+        userId: userId,
+      },
+    });
+
+    return res.json({ exists: !!plaidUser, status: 200 });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Error checking Plaid user",
+      errorDetails: error instanceof Error ? error.message : error,
+    });
+  }
 });
 
 // fetches all accounts for a given user
 router.get("/api/accounts", async (req, res) => {
-  const userId = req.query.userId as string;
-  if (!userId) {
-    return res.status(400).json({ error: "User Must Be Signed In" });
-  }
+  try {
+    const userId = req.query.userId as string;
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ error: "User Must Be Signed In", status: 400 });
+    }
 
-  const bankAccounts = await prisma.bankAccounts.findMany({
-    where: {
-      userId: userId,
-    },
-  });
-  
-  res.json(bankAccounts);
+    const bankAccounts = await prisma.bankAccounts.findMany({
+      where: {
+        userId: userId,
+      },
+    });
+
+    return res.json({ bankAccounts: bankAccounts, status: 200 });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Error fetching accounts",
+      errorDetails: error instanceof Error ? error.message : error,
+    });
+  }
 });
 
 // fetches all transactions for a given user
 router.get("/api/transactions", async (req, res) => {
-  const userId = req.query.userId as string;
-  if (!userId) {
-    return res.status(400).json({ error: "User Must Be Signed In" });
-  };
+  try {
+    const userId = req.query.userId as string;
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ error: "User Must Be Signed In", status: 400 });
+    }
 
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      userId: userId,
-    },
-  });
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId: userId,
+      },
+    });
 
-  res.json(transactions);
-})
+    return res.json({ transactions: transactions, status: 200 });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Error fetching transactions",
+      errorDetails: error instanceof Error ? error.message : error,
+    });
+  }
+});
+
+//bills
+router.get("/api/bills", async (req, res) => {
+  try {
+    const userId = req.query.userId as string;
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ error: "User Must Be Signed In", status: 400 });
+    }
+
+    const bills = await prisma.bills.findMany({
+      where: {
+        userId: userId,
+      },
+    });
+
+    return res.json({ bills: bills, status: 200 });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Error fetching bills",
+      errorDetails: error instanceof Error ? error.message : error,
+    });
+  }
+});
+
+router.get("/api/current-budget", async (req, res) => {
+  try {
+    const userId = req.query.userId as string;
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ error: "User Must Be Signed In", status: 400 });
+    }
+
+    const now = new Date();
+
+    const currentBudget = await prisma.budgetPeriod.findFirst({
+      where: {
+        userId,
+        startDate: { lte: now },
+        endDate: { gte: now },
+      },
+      orderBy: {
+        startDate: "desc",
+      },
+    });
+
+    const budgetItems = await prisma.budgetItem.findMany({
+      where: {
+        budgetPeriodId: currentBudget?.id,
+      },
+    });
+
+    return res.json({
+      currentBudget: currentBudget,
+      budgetItems: budgetItems,
+      status: 200,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Error fetching current budget",
+      errorDetails: error instanceof Error ? error.message : error,
+    });
+  }
+});
 
 export default router;

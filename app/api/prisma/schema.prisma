@@ -12,6 +12,12 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserStatus {
+  active
+  pending_deletion
+  deleted
+}
+
 model User {
   id            String    @id
   name          String
@@ -20,6 +26,9 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  deletion_requested_at  DateTime?
+  deletion_scheduled_for DateTime?
+  status                 UserStatus @default(active)
   sessions      Session[]
   accounts      Account[]
   bankAccounts  bankAccounts[]
@@ -100,10 +109,9 @@ model plaidUser{
 }
 
 model bankAccounts{
-  id String @id
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plaidAccountId String @unique
+  plaidAccountId String @unique @id
   plaidUserId String
   plaidUser plaidUser @relation(fields: [plaidUserId], references: [id], onDelete: Cascade)
   accountName String
@@ -121,6 +129,7 @@ model bankAccounts{
   includeInCalculations Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  transactions Transaction[]
   
   @@map("bank_accounts")
 }
@@ -141,6 +150,8 @@ model Transaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   bill bills?
+  accountId String?
+  bankAccounts bankAccounts? @relation(fields: [accountId], references: [plaidAccountId], onDelete: SetNull)
 
   @@map("transaction")
 }
@@ -192,6 +203,19 @@ model budgetPeriod {
   safeToSpendSnapshot Decimal
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  budgetItems budgetItem[]
 
   @@map("budget_period")
+}
+
+model budgetItem {
+  id String @id
+  budgetPeriodId String
+  budgetPeriod budgetPeriod @relation(fields: [budgetPeriodId], references: [id], onDelete: Cascade)
+  name String
+  amount Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("budget_item")
 }
