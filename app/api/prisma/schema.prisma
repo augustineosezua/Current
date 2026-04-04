@@ -109,9 +109,10 @@ model plaidUser{
 }
 
 model bankAccounts{
+  id String  @default(cuid()) @unique @id
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plaidAccountId String @unique @id
+  plaidAccountId String @unique
   plaidUserId String
   plaidUser plaidUser @relation(fields: [plaidUserId], references: [id], onDelete: Cascade)
   accountName String
