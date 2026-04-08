@@ -11,6 +11,7 @@ import plaidRouter from "./plaid/new-user";
 import getUserDetailsRouter from "./plaid/get-user-details";
 import userCreateDetailsRouter from "./plaid/user-create-details";
 import userDeletionRouter from "./plaid/user-deletion";
+import userSettingsRouter from "./plaid/user-settings";
 
 
 const app = express();
@@ -43,6 +44,7 @@ app.use(plaidRouter);
 app.use(getUserDetailsRouter);
 app.use(userCreateDetailsRouter);
 app.use(userDeletionRouter);
+app.use(userSettingsRouter);
 
 app.listen(port, () => {
   console.log(`listening on port ${port}`);

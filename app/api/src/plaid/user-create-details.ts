@@ -127,9 +127,120 @@ router.post("/api/update-budget-item", async (req, res) => {
   }
 });
 
+router.post("/api/bills", async (req, res) => {
+  try {
+    const userId = req.body.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "User Must Be Signed In" });
+    }
+    const newBill = await prisma.bills.create({
+      data: {
+        id: crypto.randomUUID(),
+        userId: userId,
+        billName: req.body.name,
+        amount: req.body.amount,
+        dueDate: new Date(req.body.dueDate),
+        isPaid: false,
+        isReccuring: req.body.isReccuring,
+      },
+    });
+    return res.json({
+      message: "Bill created successfully",
+      data: newBill,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Error creating bill",
+      errorDetails: error instanceof Error ? error.message : error,
+    });
+  }
+});
+
+router.patch("/api/bills/:billId", async (req, res) => {
+  try {
+    const { billId } = req.params;
+    const {
+      userId,
+      billName,
+      amount,
+      dueDate,
+      isPaid,
+      isRecurring,
+      frequency,
+    } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: "User Must Be Signed In" });
+    }
+
+    const existingBill = await prisma.bills.findUnique({
+      where: { id: billId },
+    });
+
+    if (!existingBill) {
+      return res.status(404).json({ error: "Bill not found" });
+    }
+
+    if (existingBill.userId !== userId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (billName !== undefined) updateData.billName = billName;
+    if (amount !== undefined) updateData.amount = amount;
+    if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
+    if (isPaid !== undefined) updateData.isPaid = isPaid;
+    if (isRecurring !== undefined) updateData.isReccuring = isRecurring;
+    if (frequency !== undefined) updateData.frequency = frequency;
+
+    const bill = await prisma.bills.update({
+      where: { id: billId },
+      data: updateData,
+    });
+
+    // Auto-generate next occurrence when the bill is paid and recurring
+    const effectiveIsPaid = isPaid !== undefined ? isPaid : existingBill.isPaid;
+    const effectiveIsRecurring =
+      isRecurring !== undefined ? isRecurring : existingBill.isReccuring;
+    const effectiveFrequency =
+      frequency !== undefined ? frequency : existingBill.frequency;
+
+    if (effectiveIsPaid && effectiveIsRecurring && effectiveFrequency) {
+      const nextDueDate = new Date(bill.dueDate);
+      if (effectiveFrequency === "weekly") {
+        nextDueDate.setDate(nextDueDate.getDate() + 7);
+      } else if (effectiveFrequency === "biweekly") {
+        nextDueDate.setDate(nextDueDate.getDate() + 14);
+      } else if (effectiveFrequency === "monthly") {
+        nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+      }
+
+      await prisma.bills.create({
+        data: {
+          id: crypto.randomUUID(),
+          userId: bill.userId,
+          billName: bill.billName,
+          amount: bill.amount,
+          dueDate: nextDueDate,
+          isPaid: false,
+          isReccuring: true,
+          frequency: effectiveFrequency,
+        },
+      });
+    }
+
+    return res.json({ bill });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Error updating bill",
+      errorDetails: error instanceof Error ? error.message : error,
+    });
+  }
+});
+
 //create transactions
 
 //update transactions
 
-//sync-transactions 
+//sync-transactions
 export default router;
