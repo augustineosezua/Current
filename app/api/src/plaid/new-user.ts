@@ -112,7 +112,6 @@ async function setBankAccounts(userId: string, data: any) {
         institutionId: item.institution_id || "",
         currentBalance: account.balances.current || 0,
         availableBalance: account.balances.available || 0,
-        accountCategory: "Spending", //will be update with a different endpoint that allows for user to change
         currency: account.balances.iso_currency_code || "",
       },
     });
@@ -140,7 +139,7 @@ async function setPlaidTransactions(accessToken: string, userId: string) {
           accountId: transaction.account_id,
           amount: transaction.amount,
           date: new Date(transaction.date),
-          mechantName: transaction.merchant_name ?? null,
+          merchantName: transaction.merchant_name ?? null,
           category: transaction.personal_finance_category?.primary ? [transaction.personal_finance_category.primary] : [],
           transactionType: transaction.payment_channel,
         },
@@ -151,7 +150,7 @@ async function setPlaidTransactions(accessToken: string, userId: string) {
           plaidTransactionId: transaction.transaction_id,
           amount: transaction.amount,
           date: new Date(transaction.date),
-          mechantName: transaction.merchant_name ?? null,
+          merchantName: transaction.merchant_name ?? null,
           category: transaction.personal_finance_category?.primary ? [transaction.personal_finance_category.primary] : [],
           transactionType: transaction.payment_channel,
         },
@@ -164,7 +163,7 @@ async function setPlaidTransactions(accessToken: string, userId: string) {
         data: {
           amount: transaction.amount,
           date: new Date(transaction.date),
-          mechantName: transaction.merchant_name ?? null,
+          merchantName: transaction.merchant_name ?? null,
           category: transaction.personal_finance_category?.primary ? [transaction.personal_finance_category.primary] : [],
           transactionType: transaction.payment_channel,
         },

@@ -36,7 +36,8 @@ model User {
   transactions   Transaction[]
   bills          bills[]
   userSettings   userSettings?
-  budgetPeriods   budgetPeriod[]
+  budgetMonths   budgetMonth[]
+  budgetItems    budgetItem[]
 
   @@unique([email])
   @@map("user")
@@ -125,9 +126,8 @@ model bankAccounts{
   isActive Boolean @default(true)
   currentBalance Decimal
   availableBalance Decimal
-  accountCategory String
   currency String
-  includeInCalculations Boolean @default(true)
+  isSavingsAccount Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   transactions Transaction[]
@@ -142,12 +142,10 @@ model Transaction {
   plaidTransactionId String @unique
   amount Decimal
   date DateTime
-  mechantName String?
+  merchantName String?
   category String[]
   transactionType String
-  TransferPairId String?
-  isSavingsContribution Boolean @default(false)
-  notes String?
+  notes String? 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   bill bills?
@@ -181,18 +179,17 @@ model userSettings{
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   theme String @default("light")
   notificationsEnabled Boolean @default(true)
-  monthlySavingsGoal Decimal @default(0)
   paychequeAmount Decimal @default(0)
   paychequeFrequency String @default("biweekly")
   nextPaychequeDate DateTime?
-  safeToSpendPeriod String @default("weekly")
+  desiredMinimumMonthlySpend Decimal @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("user_settings")
 }
 
-model budgetPeriod {
+model budgetMonth {
   id String @id
   userId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -204,17 +201,25 @@ model budgetPeriod {
   safeToSpendSnapshot Decimal
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  budgetItems budgetItem[]
 
-  @@map("budget_period")
+  @@map("budget_month")
 }
 
 model budgetItem {
   id String @id
-  budgetPeriodId String
-  budgetPeriod budgetPeriod @relation(fields: [budgetPeriodId], references: [id], onDelete: Cascade)
   name String
   amount Decimal
+  amountSaved Decimal @default(0)
+  dueDate DateTime
+  isCompleted Boolean @default(false)
+  isDeleted Boolean @default(false)
+  priority Int @default(1)
+  isReccuring Boolean @default(false)
+  frequency String?
+  userId String
+  lastPaymentDate DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isMonthlySavingGoal Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

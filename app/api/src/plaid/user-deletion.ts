@@ -46,7 +46,7 @@ router.delete("/api/delete-bank-account", async (req, res) => {
     }
 
     await prisma.bankAccounts.delete({
-      where: { plaidAccountId: bankAccountId },
+      where: { id: bankAccountId },
     });
 
     return res.json({ success: true });

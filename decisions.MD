@@ -1,0 +1,1 @@
+unpaid and late bills will be counted as negatives to the safe to spend amount - even if their due dates have passed

@@ -50,12 +50,11 @@ router.patch("/api/settings", async (req, res) => {
     }
 
     const {
-      monthlySavingsGoal,
       paychequeAmount,
       paychequeFrequency,
       nextPaychequeDate,
-      safeToSpendPeriod,
       notificationsEnabled,
+      desireMinimumSpend,
     } = req.body;
 
     const validFrequencies = ["weekly", "biweekly", "monthly"];
@@ -66,11 +65,10 @@ router.patch("/api/settings", async (req, res) => {
     }
 
     const updateData: Record<string, unknown> = {};
-    if (monthlySavingsGoal !== undefined) updateData.monthlySavingsGoal = monthlySavingsGoal;
     if (paychequeAmount !== undefined) updateData.paychequeAmount = paychequeAmount;
     if (paychequeFrequency !== undefined) updateData.paychequeFrequency = paychequeFrequency;
     if (nextPaychequeDate !== undefined) updateData.nextPaychequeDate = new Date(nextPaychequeDate);
-    if (safeToSpendPeriod !== undefined) updateData.safeToSpendPeriod = safeToSpendPeriod;
+    if (desireMinimumSpend ! == undefined) updateData.desireMinimumSpend = desireMinimumSpend;
     if (notificationsEnabled !== undefined) updateData.notificationsEnabled = notificationsEnabled;
 
     const settings = await prisma.userSettings.upsert({

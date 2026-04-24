@@ -10,6 +10,7 @@ const prisma = new PrismaClient({
   accelerateUrl: process.env.DATABASE_URL!,
 }).$extends(withAccelerate());
 
+//DEPRECATED FOR NOW
 router.post("/api/create-budget-period", async (req, res) => {
   try {
     const userId = req.body.userId;
@@ -17,7 +18,7 @@ router.post("/api/create-budget-period", async (req, res) => {
       return res.status(400).json({ error: "User Must Be Signed In" });
     }
 
-    const newBudgetPeriod = await prisma.budgetPeriod.create({
+    const newBudgetPeriod = await prisma.budgetMonth.create({
       data: {
         id: crypto.randomUUID(),
         userId: userId,
@@ -41,6 +42,7 @@ router.post("/api/create-budget-period", async (req, res) => {
   }
 });
 
+// DEPRECATED FOR NOW
 router.post("/api/update-budget-period", async (req, res) => {
   try {
     const userId = req.body.userId;
@@ -48,7 +50,7 @@ router.post("/api/update-budget-period", async (req, res) => {
       return res.status(400).json({ error: "User Must Be Signed In" });
     }
 
-    const updatedBudgetPeriod = await prisma.budgetPeriod.updateManyAndReturn({
+    const updatedBudgetPeriod = await prisma.budgetMonth.updateManyAndReturn({
       where: {
         userId: userId,
         id: req.body.budgetPeriodId,
@@ -81,9 +83,11 @@ router.post("/api/create-budget-item", async (req, res) => {
     const newBudgetItem = await prisma.budgetItem.create({
       data: {
         id: crypto.randomUUID(),
-        budgetPeriodId: req.body.budgetPeriodId,
         name: req.body.name,
         amount: req.body.amount,
+        dueDate: new Date(req.body.dueDate),
+        userId: userId,
+
       },
     });
     return res.json({
@@ -109,9 +113,19 @@ router.post("/api/update-budget-item", async (req, res) => {
       where: {
         id: req.body.budgetItemId,
       },
+      //TODO: fill in all fields with req.body data
       data: {
         name: req.body.name,
         amount: req.body.amount,
+        dueDate: new Date(req.body.dueDate),
+        userId: userId,
+        amountSaved: req.body.amountSaved,
+        isCompleted: req.body.isCompleted,
+        isDeleted: req.body.isDeleted,
+        priority: req.body.priority,
+        isReccuring: req.body.isReccuring,
+        frequency: req.body.frequency,
+        updatedAt: new Date(),
       },
     });
 
@@ -242,5 +256,4 @@ router.patch("/api/bills/:billId", async (req, res) => {
 
 //update transactions
 
-//sync-transactions
 export default router;
