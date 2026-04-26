@@ -73,10 +73,6 @@ export const calculateSafeToSpend = async (userId: any) => {
       userId: userId,
       isCompleted: false,
       isDeleted: false,
-      //end of current month
-      dueDate: {
-        lte: endOfMonth,
-      },
     },
     select: {
       amount: true,
@@ -86,8 +82,9 @@ export const calculateSafeToSpend = async (userId: any) => {
       priority: true,
       id: true,
       lastPaymentDate: true,
+      isReccuring: true,
     },
-    orderBy: [{ dueDate: "asc" }, { priority: "desc" }],
+    orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
   });
 
   const alreadySpent = await prisma.transaction.aggregate({
@@ -121,6 +118,7 @@ export const calculateSafeToSpend = async (userId: any) => {
   for (let i = 0; i < budgetItems.length; i++) {
     // avoid already completed items
     if (
+      !budgetItems[i].isReccuring &&
       budgetItems[i].amountSaved.toNumber() >= budgetItems[i].amount.toNumber()
     ) {
       continue;
@@ -134,29 +132,49 @@ export const calculateSafeToSpend = async (userId: any) => {
     ) {
       continue;
     }
-    const monthsRemaining =
+    const monthsRemaining = Math.max(
       (item.dueDate.getFullYear() - now.getFullYear()) * 12 +
-      (item.dueDate.getMonth() - now.getMonth()) +
-      1;
-    const amountPerMonth =
-      (item.amount.toNumber() - item.amountSaved.toNumber()) / monthsRemaining;
+        (item.dueDate.getMonth() - now.getMonth()) +
+        1,
+      1,
+    );
+
+    const amountPerMonth = item.isReccuring
+      ? item.amount.toNumber()
+      : (item.amount.toNumber() - item.amountSaved.toNumber()) /
+        monthsRemaining;
     budgetItemsTotal += amountPerMonth;
     budgetItemsToUpdate.push({
       id: item.id,
-      amountSaved: item.amountSaved.add(amountPerMonth),
+      newAmountSaved: item.isReccuring
+        ? item.amountSaved
+        : item.amountSaved.add(amountPerMonth),
+      amountSaved: item.amountSaved,
+      dueDate: item.dueDate,
+      amount: item.amount,
+      isReccuring: item.isReccuring,
     });
   }
 
   // helper to update amount saved in prisma
   const updateBudgetItems = async (items: any[]) => {
     for (let i = 0; i < items.length; i++) {
+      let isCompleted = false;
+      if (
+        !items[i].isReccuring &&
+        items[i].amount.toNumber() <= items[i].newAmountSaved.toNumber()
+      ) {
+        isCompleted = true;
+        items[i].newAmountSaved = items[i].amount;
+      }
       await prisma.budgetItem.update({
         where: {
           id: items[i].id,
         },
         data: {
-          amountSaved: items[i].amountSaved,
+          amountSaved: items[i].newAmountSaved,
           lastPaymentDate: new Date(),
+          isCompleted: isCompleted,
         },
       });
     }
@@ -164,7 +182,10 @@ export const calculateSafeToSpend = async (userId: any) => {
 
   // check if all data exists before doing calculations
 
-  if (!availableBalance._sum.availableBalance) {
+  if (
+    availableBalance._sum.availableBalance === null ||
+    availableBalance._sum.availableBalance === undefined
+  ) {
     returnValues.error =
       "Error calculating safe to spend. Please try again later.";
     return returnValues;
@@ -174,7 +195,7 @@ export const calculateSafeToSpend = async (userId: any) => {
 
   if (
     availableBalance._sum.availableBalance.toNumber() >=
-    billsTotal + budgetItemsTotal
+    billsTotal + budgetItemsTotal + remainingDesiredMonthlySpend
   ) {
     await updateBudgetItems(budgetItemsToUpdate);
     // update return values
@@ -199,34 +220,48 @@ export const calculateSafeToSpend = async (userId: any) => {
 
     if (remainingBalance >= minimumMonthlySpend) {
       // allocate funds while remaining balance is not 0 and we have more budget items to update
+      remainingBalance = Math.max(remainingBalance - minimumMonthlySpend, 0);
+      let ranOut = false;
       for (let i = 0; i < budgetItems.length; i++) {
         const item = budgetItems[i];
-        const monthsRemaining =
+        const monthsRemaining = Math.max(
           (item.dueDate.getFullYear() - now.getFullYear()) * 12 +
-          (item.dueDate.getMonth() - now.getMonth()) +
-          1;
-        const amountPerMonth =
-          (item.amount.toNumber() - item.amountSaved.toNumber()) /
-          monthsRemaining;
+            (item.dueDate.getMonth() - now.getMonth()) +
+            1,
+          1,
+        );
+
+        const amountPerMonth = item.isReccuring
+          ? item.amount.toNumber()
+          : (item.amount.toNumber() - item.amountSaved.toNumber()) /
+            monthsRemaining;
         remainingBalance -= amountPerMonth;
         // push all unpdated to ignored if we run out of money
         if (remainingBalance <= 0) {
-          for (let j = i; j < budgetItems.length; j++) {
+          for (let j = i + 1; j < budgetItems.length; j++) {
             ignoredBudgetItems.push(budgetItems[j]);
           }
-          returnValues.safeToSpend = remainingBalance + amountPerMonth;
+          returnValues.safeToSpend = Math.max(
+            remainingBalance + amountPerMonth,
+            0,
+          );
+          ranOut = true;
           break;
         }
         //else push to update list
         updatedBudgetItems.push({
           id: item.id,
-          amountSaved: item.amountSaved.add(amountPerMonth),
+          newAmountSaved: item.isReccuring
+            ? item.amountSaved
+            : item.amountSaved.add(amountPerMonth),
         });
       }
-      returnValues.safeToSpend = remainingBalance;
+      if (!ranOut) {
+        returnValues.safeToSpend = remainingBalance + minimumMonthlySpend;
+      }
     } else {
       // if its not enough, just return the available balance as safe to spend and ignore all budget items
-      returnValues.safeToSpend = remainingBalance;
+      returnValues.safeToSpend = remainingBalance + minimumMonthlySpend;
     }
 
     return [updatedBudgetItems, ignoredBudgetItems];
@@ -241,7 +276,7 @@ export const calculateSafeToSpend = async (userId: any) => {
       availableBalance._sum.availableBalance.toNumber() - billsTotal;
     const [updatedBudgetItems, ignoredBudgetItems] = allocateForBudgetItems(
       remainingBalance,
-      budgetItems,
+      budgetItemsToUpdate,
       remainingDesiredMonthlySpend,
     );
     await updateBudgetItems(updatedBudgetItems);

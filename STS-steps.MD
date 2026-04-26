@@ -21,8 +21,8 @@
 
 - [x] ~~`GET /api/accounts` — remove any logic referencing `accountCategory` or `includeInCalculations`~~
 - [x] ~~`DELETE /api/delete-bank-account` — currently deletes by `plaidAccountId`, update to delete by internal `id`~~
-- [ ] `PATCH /api/settings` — remove `monthlySavingsGoal` and `safeToSpendPeriod` handling, add `desiredMinimumMonthlySpend` — **bug: wrong field name (`desireMinimumSpend`) + syntax error (`! ==`) in user-settings.ts:71**
-- [ ] `GET /api/bills` — add a flag in the response distinguishing overdue unpaid bills from upcoming unpaid bills
+- [x] `PATCH /api/settings` — remove `monthlySavingsGoal` and `safeToSpendPeriod` handling, add `desiredMinimumMonthlySpend` — **bug: wrong field name (`desireMinimumSpend`) + syntax error (`! ==`) in user-settings.ts:71**
+- [?] `GET /api/bills` — add a flag in the response distinguishing overdue unpaid bills from upcoming unpaid bills
 - [x] ~~`POST /api/exchange-public-token` — update `setBankAccounts` to remove `accountCategory` assignment, set `isSavingsAccount: false` as default~~
 
 ---
@@ -41,17 +41,17 @@
 
 > Lives in `src/lib/sts.ts`. Test logic here before wiring to the endpoint.
 
-- [ ] Sum `availableBalance` across all non-savings accounts, fallback to `currentBalance` if null — **currently only uses `currentBalance`, no fallback**
-- [ ] Exclude credit accounts from balance sum (`accountType === 'credit'`) — **no accountType filter in query**
-- [ ] Filter bills to unpaid ones due this calendar month plus any overdue unpaid ones — **currently sums ALL unpaid bills with no date filter**
-- [ ] Run priority allocation algorithm across active `budgetItem` records (highest to lowest `priority`)
-- [ ] Calculate monthly requirement per goal
+- [x] Sum `availableBalance` across all non-savings accounts
+- [x] Exclude credit accounts from balance sum (`accountType === 'credit'`)
+- [x] Filter bills to unpaid ones due this calendar month plus any overdue unpaid ones
+- [x] Run priority allocation algorithm across active `budgetItem` records (highest to lowest `priority`)
+- [x] Calculate monthly requirement per goal
   - Recurring monthly goal: flat `amount`
   - One-time goal: `(amount - amountSaved) / months_until_dueDate`
   - Handle `months_until_dueDate < 1` edge case — treat as full remaining `amount` due this month — **Math.max(1, ...) handles this**
-- [ ] Protect `desiredMinimumMonthlySpend` before goal allocation — **referenced but `if` block is empty, no actual return**
-- [ ] Flow leftover back into STS if everything is fully funded
-- [ ] Floor STS at 0 — **function currently returns nothing**
+- [x] Protect `desiredMinimumMonthlySpend` before goal allocation — **referenced but `if` block is empty, no actual return**
+- [x] Flow leftover back into STS if everything is fully funded
+- [x] Floor STS at 0 — **function currently returns nothing**
 
 ---
 
@@ -107,22 +107,3 @@
 5. Fix Plaid sync logic
 6. "Available after" and reconciliation last (depend on core STS being solid)
 ```
-
-
-When remainingBalance <= 0, line 214 correctly sets safeToSpend = remainingBalance + amountPerMonth, then breaks out of the for loop — but line 223 (returnValues.safeToSpend =   
-  remainingBalance) runs unconditionally after the loop and overwrites it with a negative number. You need a flag or a restructure to prevent that:
-
-  let ranOut = false;
-  for (...) {
-    if (remainingBalance <= 0) {
-      returnValues.safeToSpend = remainingBalance + amountPerMonth;
-      ranOut = true;
-      returnValues.safeToSpend = remainingBalance + amountPerMonth;
-      ranOut = true;
-      break;
-    }
-    updatedBudgetItems.push(...);
-  }
-  if (!ranOut) {
-    returnValues.safeToSpend = remainingBalance;
-  }

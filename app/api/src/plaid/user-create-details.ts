@@ -113,7 +113,6 @@ router.post("/api/update-budget-item", async (req, res) => {
       where: {
         id: req.body.budgetItemId,
       },
-      //TODO: fill in all fields with req.body data
       data: {
         name: req.body.name,
         amount: req.body.amount,
