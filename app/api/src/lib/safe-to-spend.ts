@@ -1,20 +1,73 @@
 import { PrismaClient } from "../generated/prisma/client";
 import { withAccelerate } from "@prisma/extension-accelerate";
 
+// All Plaid primary categories that count as spending.
+// Excluded: INCOME, TRANSFER_IN, TRANSFER_OUT, LOAN_DISBURSEMENTS — not outflows.
+// Excluded: RENT_AND_UTILITIES, LOAN_PAYMENTS — tracked separately in the bills table.
+const SPENDING_CATEGORIES = [
+  "BANK_FEES",
+  "ENTERTAINMENT",
+  "FOOD_AND_DRINK",
+  "GENERAL_MERCHANDISE",
+  "GENERAL_SERVICES",
+  "GOVERNMENT_AND_NON_PROFIT",
+  "HOME_IMPROVEMENT",
+  "MEDICAL",
+  "OTHER",
+  "PERSONAL_CARE",
+  "TRANSPORTATION",
+  "TRAVEL",
+];
+
 const prisma = new PrismaClient({
   accelerateUrl: process.env.DATABASE_URL!,
 }).$extends(withAccelerate());
 
+// persist updated amountSaved for each budget item
+const updateBudgetItems = async (items: any[]) => {
+  for (let i = 0; i < items.length; i++) {
+    let isCompleted = false;
+    // cap saved amount and flag complete if non-recurring goal is fully funded
+    if (
+      !items[i].isReccuring &&
+      items[i].amount.toNumber() <= items[i].newAmountSaved.toNumber()
+    ) {
+      isCompleted = true;
+      items[i].newAmountSaved = items[i].amount;
+    }
+    // write the update to db
+    await prisma.budgetItem.update({
+      where: {
+        id: items[i].id,
+      },
+      data: {
+        amountSaved: items[i].newAmountSaved,
+        lastPaymentDate: new Date(),
+        isCompleted: isCompleted,
+      },
+    });
+  }
+};
+
+export const commitSafeToSpendAllocations = async (
+  pendingBudgetItemUpdates: any[],
+) => {
+  await updateBudgetItems(pendingBudgetItemUpdates);
+};
+
 export const calculateSafeToSpend = async (userId: any) => {
+  // default return shape
   let returnValues = {
     safeToSpend: 0,
-    availableAfterAmount: null,
-    availableAfterDate: null,
+    availableAfterAmount: null as number | null,
+    availableAfterDate: null as Date | null,
     ignoredBudgetItems: [] as any[],
     acceptedBudgetItems: [] as any[],
-    error: null as string | null,
+    pendingBudgetItemUpdates: [] as any[],
+    error: null as Error | null,
   };
 
+  // sum of non-savings, non-credit checking balances
   const availableBalance = await prisma.bankAccounts.aggregate({
     _sum: {
       availableBalance: true,
@@ -28,9 +81,20 @@ export const calculateSafeToSpend = async (userId: any) => {
     },
   });
 
+  // no linked accounts found — can't calculate
+  if (
+    availableBalance._sum.availableBalance === null ||
+    availableBalance._sum.availableBalance === undefined
+  ) {
+    returnValues.error = new Error(
+      "Error Calculating Safe To Spend: No linked accounts found",
+    );
+    return returnValues;
+  }
+
+  // date range for the current month
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
   const endOfMonth = new Date(
     now.getFullYear(),
     now.getMonth() + 1,
@@ -41,33 +105,30 @@ export const calculateSafeToSpend = async (userId: any) => {
     999,
   );
 
+  // fetch desired minimum monthly spend setting
   const userSettings = await prisma.userSettings.findUnique({
-    where: {
-      userId: userId,
-    },
+    where: { userId: userId },
   });
 
+  // sum unpaid bills due this month
   let billsTotal = 0;
   const billsFetcher = await prisma.bills.aggregate({
-    _sum: {
-      amount: true,
-    },
+    _sum: { amount: true },
     where: {
       isPaid: false,
       userId: userId,
-      //due in current month
-      dueDate: {
-        lte: endOfMonth,
-      },
+      dueDate: { lte: endOfMonth },
     },
   });
 
+  // handle null aggregate (no unpaid bills)
   if (!billsFetcher._sum.amount) {
     billsTotal = 0;
   } else {
     billsTotal = billsFetcher._sum.amount.toNumber();
   }
 
+  // active budget goals, highest priority and soonest due first
   const budgetItems = await prisma.budgetItem.findMany({
     where: {
       userId: userId,
@@ -81,28 +142,24 @@ export const calculateSafeToSpend = async (userId: any) => {
       createdAt: true,
       priority: true,
       id: true,
+      name: true,
       lastPaymentDate: true,
       isReccuring: true,
     },
     orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
   });
 
+  // spending transactions so far this month — matched against Plaid's primary category names
   const alreadySpent = await prisma.transaction.aggregate({
-    _sum: {
-      amount: true,
-    },
+    _sum: { amount: true },
     where: {
       userId: userId,
-      date: {
-        gte: startOfMonth,
-        lte: now,
-      },
-      category: {
-        has: "spending",
-      },
+      date: { gte: startOfMonth, lte: now },
+      category: { hasSome: SPENDING_CATEGORIES },
     },
   });
 
+  // how much of the monthly spend budget is still left to use
   let remainingDesiredMonthlySpend = 0;
   if (userSettings) {
     remainingDesiredMonthlySpend = Math.max(
@@ -112,11 +169,11 @@ export const calculateSafeToSpend = async (userId: any) => {
     );
   }
 
-  //sum of all budget items
+  // build list of items that need a contribution this month and their per-month amounts
   let budgetItemsTotal = 0;
   let budgetItemsToUpdate = [];
   for (let i = 0; i < budgetItems.length; i++) {
-    // avoid already completed items
+    // skip non-recurring items already fully saved
     if (
       !budgetItems[i].isReccuring &&
       budgetItems[i].amountSaved.toNumber() >= budgetItems[i].amount.toNumber()
@@ -124,7 +181,7 @@ export const calculateSafeToSpend = async (userId: any) => {
       continue;
     }
     const item = budgetItems[i];
-    // avoid double payments
+    // skip items already contributed to this month
     if (
       item.lastPaymentDate &&
       item.lastPaymentDate.getMonth() === now.getMonth() &&
@@ -138,11 +195,11 @@ export const calculateSafeToSpend = async (userId: any) => {
         1,
       1,
     );
-
     const amountPerMonth = item.isReccuring
       ? item.amount.toNumber()
       : (item.amount.toNumber() - item.amountSaved.toNumber()) /
         monthsRemaining;
+
     budgetItemsTotal += amountPerMonth;
     budgetItemsToUpdate.push({
       id: item.id,
@@ -152,76 +209,41 @@ export const calculateSafeToSpend = async (userId: any) => {
       amountSaved: item.amountSaved,
       dueDate: item.dueDate,
       amount: item.amount,
+      name: item.name,
       isReccuring: item.isReccuring,
     });
   }
 
-  // helper to update amount saved in prisma
-  const updateBudgetItems = async (items: any[]) => {
-    for (let i = 0; i < items.length; i++) {
-      let isCompleted = false;
-      if (
-        !items[i].isReccuring &&
-        items[i].amount.toNumber() <= items[i].newAmountSaved.toNumber()
-      ) {
-        isCompleted = true;
-        items[i].newAmountSaved = items[i].amount;
-      }
-      await prisma.budgetItem.update({
-        where: {
-          id: items[i].id,
-        },
-        data: {
-          amountSaved: items[i].newAmountSaved,
-          lastPaymentDate: new Date(),
-          isCompleted: isCompleted,
-        },
-      });
-    }
-  };
-
-  // check if all data exists before doing calculations
-
-  if (
-    availableBalance._sum.availableBalance === null ||
-    availableBalance._sum.availableBalance === undefined
-  ) {
-    returnValues.error =
-      "Error calculating safe to spend. Please try again later.";
-    return returnValues;
-  }
-
-  // check if all expenses can be covered by available balance
-
+  // happy path — everything is fully funded
   if (
     availableBalance._sum.availableBalance.toNumber() >=
     billsTotal + budgetItemsTotal + remainingDesiredMonthlySpend
   ) {
-    await updateBudgetItems(budgetItemsToUpdate);
-    // update return values
-    returnValues.safeToSpend =
+    returnValues.safeToSpend = Math.max(
       availableBalance._sum.availableBalance.toNumber() -
-      billsTotal -
-      budgetItemsTotal;
+        billsTotal -
+        budgetItemsTotal,
+      0,
+    );
     returnValues.ignoredBudgetItems = [];
     returnValues.acceptedBudgetItems = budgetItemsToUpdate;
+    returnValues.pendingBudgetItemUpdates = budgetItemsToUpdate;
     return returnValues;
   }
 
-  /**helper function to allocate remaining balace to
-   * budget items based on priority and due date */
+  // greedy allocator: fund goals in priority order until balance runs out
   const allocateForBudgetItems = (
     remainingBalance: number,
     budgetItems: any[],
     minimumMonthlySpend: number,
-  ) => {
+  ): [any[], any[], number] => {
     let updatedBudgetItems: any[] = [];
     let ignoredBudgetItems: any[] = [];
+    let newSafeToSpend: number = 0;
 
+    // only allocate to goals after reserving minimum monthly spend
     if (remainingBalance >= minimumMonthlySpend) {
-      // allocate funds while remaining balance is not 0 and we have more budget items to update
       remainingBalance = Math.max(remainingBalance - minimumMonthlySpend, 0);
-      let ranOut = false;
       for (let i = 0; i < budgetItems.length; i++) {
         const item = budgetItems[i];
         const monthsRemaining = Math.max(
@@ -230,75 +252,182 @@ export const calculateSafeToSpend = async (userId: any) => {
             1,
           1,
         );
-
         const amountPerMonth = item.isReccuring
           ? item.amount.toNumber()
           : (item.amount.toNumber() - item.amountSaved.toNumber()) /
             monthsRemaining;
+
         remainingBalance -= amountPerMonth;
-        // push all unpdated to ignored if we run out of money
-        if (remainingBalance <= 0) {
-          for (let j = i + 1; j < budgetItems.length; j++) {
+
+        // balance exhausted — remaining items are ignored, sts is whatever is left
+        if (remainingBalance < 0) {
+          for (let j = i; j < budgetItems.length; j++) {
             ignoredBudgetItems.push(budgetItems[j]);
           }
-          returnValues.safeToSpend = Math.max(
-            remainingBalance + amountPerMonth,
+          newSafeToSpend = Math.max(
+            remainingBalance + amountPerMonth + minimumMonthlySpend,
             0,
           );
-          ranOut = true;
           break;
         }
-        //else push to update list
+
         updatedBudgetItems.push({
           id: item.id,
+          dueDate: item.dueDate,
+          amountSaved: item.amountSaved,
+          amount: item.amount,
+          isReccuring: item.isReccuring,
+          name: item.name,
           newAmountSaved: item.isReccuring
             ? item.amountSaved
             : item.amountSaved.add(amountPerMonth),
         });
       }
-      if (!ranOut) {
-        returnValues.safeToSpend = remainingBalance + minimumMonthlySpend;
-      }
     } else {
-      // if its not enough, just return the available balance as safe to spend and ignore all budget items
-      returnValues.safeToSpend = remainingBalance + minimumMonthlySpend;
+      // can't even cover minimum spend — skip all goals
+      ignoredBudgetItems = budgetItems;
+      newSafeToSpend = Math.max(remainingBalance, 0);
     }
 
-    return [updatedBudgetItems, ignoredBudgetItems];
+    return [updatedBudgetItems, ignoredBudgetItems, newSafeToSpend];
   };
 
-  // we should only be here if the bills + budget items exceed available balance
+  const availableAfterCalculation = async () => {
+    const incomeInfo = await prisma.income.findMany({
+      where: {
+        userId: userId,
+      },
+      orderBy: { nextPaymentDate: "asc" },
+    });
 
-  // check if we can at least pay the bills
+    //advance nextpaycheck date on past paychecks based on frequency
+    if (incomeInfo === null) {
+      returnValues.error = new Error(
+        "Error Calculating Safe To Spend: No income information found",
+      );
+      return returnValues;
+    }
 
+    // no income info found
+    if (incomeInfo.length === 0) {
+      returnValues.availableAfterAmount = 0;
+      returnValues.availableAfterDate = null;
+      return returnValues;
+    }
+
+    for (let i = 0; i < incomeInfo.length; i++) {
+      const nextPaymentDate = incomeInfo[i].nextPaymentDate;
+      if (nextPaymentDate && nextPaymentDate < now) {
+        switch (incomeInfo[i].frequency) {
+          case "weekly":
+            while (nextPaymentDate < now) {
+              nextPaymentDate.setDate(nextPaymentDate.getDate() + 7);
+            }
+            break;
+
+          case "biweekly":
+            while (nextPaymentDate < now) {
+              nextPaymentDate.setDate(nextPaymentDate.getDate() + 14);
+            }
+            break;
+          case "monthly":
+            while (nextPaymentDate < now) {
+              nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+            }
+            break;
+          case "semimonthly":
+            while (nextPaymentDate < now) {
+              if (nextPaymentDate.getDate() < 15) {
+                nextPaymentDate.setDate(15);
+              } else {
+                nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+                nextPaymentDate.setDate(1);
+              }
+            }
+            break;
+          case "daily":
+            while (nextPaymentDate < now) {
+              nextPaymentDate.setDate(nextPaymentDate.getDate() + 1);
+            }
+            break;
+          case "yearly":
+            while (nextPaymentDate < now) {
+              nextPaymentDate.setFullYear(nextPaymentDate.getFullYear() + 1);
+            }
+        }
+      }
+    }
+
+    //update db with new next paycheck dates
+    for (let i = 0; i < incomeInfo.length; i++) {
+      await prisma.income.update({
+        where: { id: incomeInfo[i].id },
+        data: { nextPaymentDate: incomeInfo[i].nextPaymentDate },
+      });
+    }
+
+    const nextPaycheck = await prisma.income.findFirst({
+      where: {
+        userId: userId,
+        nextPaymentDate: { gte: now },
+      },
+      orderBy: { nextPaymentDate: "asc" },
+    });
+
+    //calculate available after date and amount if paycheck info is available
+    if (nextPaycheck) {
+      const afterNextPayBalance =
+        availableBalance._sum.availableBalance!.toNumber() +
+        nextPaycheck.amount.toNumber();
+      if (afterNextPayBalance >= billsTotal) {
+        let remainingBalance = afterNextPayBalance - billsTotal;
+        if (remainingBalance >= 0) {
+          const [updatedBudgetItems, ignoredBudgetItems, newSafeToSpend] =
+            allocateForBudgetItems(
+              remainingBalance,
+              budgetItemsToUpdate,
+              remainingDesiredMonthlySpend,
+            );
+          returnValues.availableAfterAmount = newSafeToSpend;
+          returnValues.availableAfterDate = nextPaycheck.nextPaymentDate;
+        }
+      } else {
+        returnValues.availableAfterAmount = 0;
+        returnValues.availableAfterDate = nextPaycheck.nextPaymentDate;
+      }
+    }
+  };
+
+  // partial path — can cover bills but not all goals
   if (availableBalance._sum.availableBalance.toNumber() >= billsTotal) {
     let remainingBalance =
       availableBalance._sum.availableBalance.toNumber() - billsTotal;
-    const [updatedBudgetItems, ignoredBudgetItems] = allocateForBudgetItems(
-      remainingBalance,
-      budgetItemsToUpdate,
-      remainingDesiredMonthlySpend,
-    );
-    await updateBudgetItems(updatedBudgetItems);
+    const [updatedBudgetItems, ignoredBudgetItems, newSafeToSpend] =
+      allocateForBudgetItems(
+        remainingBalance,
+        budgetItemsToUpdate,
+        remainingDesiredMonthlySpend,
+      );
     returnValues.ignoredBudgetItems = ignoredBudgetItems;
     returnValues.acceptedBudgetItems = updatedBudgetItems;
-    return returnValues;
+    returnValues.pendingBudgetItemUpdates = updatedBudgetItems;
+    returnValues.safeToSpend = newSafeToSpend;
+    if (newSafeToSpend === 0) {
+      await availableAfterCalculation();
+      return returnValues;
+    } else {
+      return returnValues;
+    }
   }
 
-  // we go here if we cant afford the bills
-  // available after calculations here
-
+  // can't afford bills
   returnValues.safeToSpend = 0;
   returnValues.ignoredBudgetItems = budgetItems;
   returnValues.acceptedBudgetItems = [];
+  returnValues.pendingBudgetItemUpdates = [];
 
+  // fetch income info for available after calculation
+
+  await availableAfterCalculation();
   return returnValues;
 };
-/**
- * safe to spend = available - expenses
- * available = current balance
- * expenses = bills + budget items in current period + already spent in current period
- * bills = sum of all transactions with category "bills" in current period
- * budget items in current period = sum of all budget items with dueDate in current period
- * already spent in current period = sum of all transactions with category "spending" in current period
- */

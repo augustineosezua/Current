@@ -13,7 +13,7 @@ export const auth = betterAuth({
   }),
   emailAndPassword:{
     enabled: true,
-    //need to handle hashing, salting, email verification, password reset, etc.
+    //need password reset
   },
   
   baseURL: process.env.BASE_URL ?? "http://localhost:3001",

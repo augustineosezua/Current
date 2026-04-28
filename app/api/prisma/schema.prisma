@@ -18,6 +18,16 @@ enum UserStatus {
   deleted
 }
 
+enum IncomeFrequency {
+  one_time
+  daily
+  weekly
+  biweekly
+  semimonthly
+  monthly
+  yearly
+}
+
 model User {
   id            String    @id
   name          String
@@ -32,12 +42,13 @@ model User {
   sessions      Session[]
   accounts      Account[]
   bankAccounts  bankAccounts[]
-  plaidUser    plaidUser?
+  plaidUser    plaidUser[]
   transactions   Transaction[]
   bills          bills[]
   userSettings   userSettings?
   budgetMonths   budgetMonth[]
   budgetItems    budgetItem[]
+  income income[]
 
   @@unique([email])
   @@map("user")
@@ -93,11 +104,11 @@ model Verification {
 
 model plaidUser{
   id String @id
-  userId    String @unique
+  userId    String
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   plaidUserId String
   plaidAccessToken String
-  plaidItemId String
+  plaidItemId String @unique
   needsReAuth Boolean @default(false)
   lastSyncedAt DateTime? @default(now())
   createdAt DateTime @default(now())
@@ -145,7 +156,12 @@ model Transaction {
   merchantName String?
   category String[]
   transactionType String
-  notes String? 
+  notes String?
+  logoUrl String?
+  transactionLocation String?
+  transactionStatus String
+  transactionCategory String?
+  transactionTime DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   bill bills?
@@ -163,7 +179,7 @@ model bills{
   amount Decimal
   dueDate DateTime
   isReccuring Boolean @default(false)
-  frequency String?
+  frequency IncomeFrequency?
   isPaid Boolean @default(false)
   transactionId String? @unique
   transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
@@ -187,6 +203,20 @@ model userSettings{
   updatedAt DateTime @updatedAt
 
   @@map("user_settings")
+}
+
+model income {
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source String?
+  amount Decimal
+  frequency IncomeFrequency @default(one_time)
+  nextPaymentDate DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("income")
 }
 
 model budgetMonth {
