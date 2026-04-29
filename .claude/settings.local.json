@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:plaid.com)"
+      "WebFetch(domain:plaid.com)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }
