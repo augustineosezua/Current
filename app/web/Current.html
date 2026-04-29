@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Current — Safe-To-Spend</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #0c0d1a; font-family: 'Manrope', sans-serif; color: #fff; }
+  body { min-height: 100vh; }
+  #root { min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" data-presets="env,react">
+
+// ═══ tokens.jsx ═══
+// tokens.jsx — Current design tokens
+const CURRENT = {
+  bgDeep:   '#1A1A2E', // background blue-black
+  surface:  '#16213E', // mossy blue cards
+  blue:     '#5EB3FF', // pop blue / CTA / highlights
+  gold:     '#F5C400', // savings only
+  white:    '#FFFFFF',
+  green:    '#3ecf8e', // income
+
+  // derived (opacity-only)
+  surfaceHi:  'rgba(94,179,255,0.08)',
+  surfaceMed: 'rgba(255,255,255,0.06)',
+  surfaceLow: 'rgba(255,255,255,0.03)',
+  border:     'rgba(255,255,255,0.08)',
+  borderHi:   'rgba(94,179,255,0.22)',
+  text:       '#FFFFFF',
+  textMed:    'rgba(255,255,255,0.66)',
+  textLow:    'rgba(255,255,255,0.44)',
+  textMute:   'rgba(255,255,255,0.28)',
+};
+
+const RADIUS = { sm: 12, md: 20, lg: 28, pill: 999 };
+const SPACE  = { 1:8, 2:16, 3:24, 4:32, 5:40, 6:48, 8:64 };
+
+const FONT = '"Manrope", -apple-system, system-ui, sans-serif';
+
+// Vault-style category → hue (derived from blue and white, no new palette)
+const CAT = {
+  grocery:  { icon: '🛒', tint: 'rgba(94,179,255,0.14)' },
+  transit:  { icon: '🚇', tint: 'rgba(94,179,255,0.10)' },
+  coffee:   { icon: '☕', tint: 'rgba(245,196,0,0.12)'  },
+  income:   { icon: '↓',  tint: 'rgba(62,207,142,0.14)' },
+  rent:     { icon: '⌂',  tint: 'rgba(94,179,255,0.10)' },
+  phone:    { icon: '📱', tint: 'rgba(94,179,255,0.10)' },
+  music:    { icon: '♪',  tint: 'rgba(94,179,255,0.10)' },
+  dining:   { icon: '◎',  tint: 'rgba(94,179,255,0.10)' },
+  savings:  { icon: '✦',  tint: 'rgba(245,196,0,0.14)'  },
+};
+
+Object.assign(window, { CURRENT, RADIUS, SPACE, FONT, CAT });
+
+
+// ═══ primitives.jsx ═══
+// primitives.jsx — Current UI primitives (buttons, cards, rows, toggles, progress, chips)
+
+const Btn = ({ variant = 'primary', size = 'lg', children, onClick, loading, disabled, style, full }) => {
+  const base = {
+    fontFamily: FONT, fontWeight: 700, letterSpacing: -0.2,
+    border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    transition: 'transform .12s ease, opacity .15s ease, background .15s ease',
+    width: full ? '100%' : 'auto',
+    opacity: disabled ? 0.45 : 1,
+  };
+  const sizes = {
+    md: { height: 44, padding: '0 18px', borderRadius: RADIUS.pill, fontSize: 15 },
+    lg: { height: 56, padding: '0 26px', borderRadius: RADIUS.pill, fontSize: 17 },
+  };
+  const variants = {
+    primary:   { background: CURRENT.blue, color: CURRENT.bgDeep },
+    secondary: { background: CURRENT.surface, color: CURRENT.white, boxShadow: `inset 0 0 0 1px ${CURRENT.borderHi}` },
+    ghost:     { background: 'transparent', color: CURRENT.blue },
+  };
+  return (
+    <button
+      onClick={disabled || loading ? undefined : onClick}
+      onMouseDown={(e) => !disabled && (e.currentTarget.style.transform = 'scale(0.985)')}
+      onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+      style={{ ...base, ...sizes[size], ...variants[variant], ...style }}
+    >
+      {loading ? <Spinner color={variant === 'primary' ? CURRENT.bgDeep : CURRENT.blue} /> : children}
+    </button>
+  );
+};
+
+const Spinner = ({ color = CURRENT.blue, size = 18 }) => (
+  <div style={{
+    width: size, height: size, borderRadius: '50%',
+    border: `2px solid ${color}33`, borderTopColor: color,
+    animation: 'spin 0.8s linear infinite',
+  }} />
+);
+
+const Card = ({ children, label, padding = 20, radius = RADIUS.lg, style, onClick, elevated }) => (
+  <div
+    onClick={onClick}
+    style={{
+      background: CURRENT.surface,
+      borderRadius: radius,
+      padding,
+      color: CURRENT.text,
+      cursor: onClick ? 'pointer' : 'default',
+      boxShadow: elevated
+        ? '0 10px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)'
+        : 'inset 0 1px 0 rgba(255,255,255,0.03)',
+      transition: 'transform .12s ease, background .15s ease',
+      ...style,
+    }}
+    onMouseDown={(e) => onClick && (e.currentTarget.style.transform = 'scale(0.99)')}
+    onMouseUp={(e) => onClick && (e.currentTarget.style.transform = 'scale(1)')}
+    onMouseLeave={(e) => onClick && (e.currentTarget.style.transform = 'scale(1)')}
+  >
+    {label && (
+      <div style={{
+        fontSize: 11, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase',
+        color: CURRENT.textLow, marginBottom: 10,
+      }}>{label}</div>
+    )}
+    {children}
+  </div>
+);
+
+const SectionTitle = ({ children, action, onAction }) => (
+  <div style={{
+    display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+    padding: '0 4px', marginBottom: 12,
+  }}>
+    <div style={{
+      fontSize: 13, fontWeight: 700, letterSpacing: 1.6, textTransform: 'uppercase',
+      color: CURRENT.textLow,
+    }}>{children}</div>
+    {action && (
+      <button onClick={onAction} style={{
+        background: 'transparent', border: 'none', cursor: 'pointer',
+        fontFamily: FONT, fontWeight: 600, fontSize: 13,
+        color: CURRENT.blue, padding: 0,
+      }}>{action}</button>
+    )}
+  </div>
+);
+
+const Toggle = ({ on, onChange, color = CURRENT.blue, disabled }) => (
+  <button
+    onClick={() => !disabled && onChange(!on)}
+    style={{
+      width: 44, height: 26, borderRadius: 999, border: 'none',
+      background: on ? color : 'rgba(255,255,255,0.12)',
+      padding: 0, position: 'relative', cursor: disabled ? 'not-allowed' : 'pointer',
+      transition: 'background .2s ease', opacity: disabled ? 0.5 : 1,
+      flexShrink: 0,
+    }}
+  >
+    <div style={{
+      position: 'absolute', top: 3, left: on ? 21 : 3,
+      width: 20, height: 20, borderRadius: '50%',
+      background: on && color === CURRENT.blue ? CURRENT.bgDeep : '#fff',
+      transition: 'left .2s ease',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+    }} />
+  </button>
+);
+
+const Chip = ({ active, children, onClick, icon }) => (
+  <button
+    onClick={onClick}
+    style={{
+      height: 34, padding: '0 14px', borderRadius: 999,
+      background: active ? CURRENT.blue : 'rgba(255,255,255,0.06)',
+      color: active ? CURRENT.bgDeep : CURRENT.text,
+      border: 'none', cursor: 'pointer',
+      fontFamily: FONT, fontWeight: 600, fontSize: 13,
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      transition: 'background .15s ease',
+      flexShrink: 0,
+    }}
+  >
+    {icon && <span style={{ fontSize: 12 }}>{icon}</span>}
+    {children}
+  </button>
+);
+
+const CategoryBadge = ({ cat = 'grocery', size = 40 }) => {
+  const c = CAT[cat] || CAT.grocery;
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size * 0.32,
+      background: c.tint,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.44, color: CURRENT.white, flexShrink: 0,
+      boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)',
+    }}>
+      <span style={{ opacity: 0.85 }}>{c.icon}</span>
+    </div>
+  );
+};
+
+const TxnRow = ({ merchant, category, date, amount, cat, account, onClick, flagged }) => {
+  const pos = amount > 0;
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        padding: '12px 4px', cursor: onClick ? 'pointer' : 'default',
+        borderRadius: 12,
+      }}
+    >
+      <CategoryBadge cat={cat} size={40} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontWeight: 600, fontSize: 15, color: CURRENT.text,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{merchant}</div>
+        <div style={{ fontSize: 12, color: CURRENT.textLow, marginTop: 2 }}>
+          {category}{account && ` · ${account}`}{date && ` · ${date}`}
+        </div>
+      </div>
+      <div style={{
+        fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 15,
+        color: pos ? CURRENT.green : CURRENT.text,
+      }}>
+        {pos ? '+' : '−'}${Math.abs(amount).toFixed(2)}
+      </div>
+      {flagged && <div style={{
+        width: 6, height: 6, borderRadius: 999, background: CURRENT.gold, marginLeft: 2,
+      }} />}
+    </div>
+  );
+};
+
+const Progress = ({ value, max = 100, color = CURRENT.gold, height = 8 }) => {
+  const pct = Math.min(100, (value / max) * 100);
+  return (
+    <div style={{
+      height, borderRadius: 999, background: 'rgba(255,255,255,0.06)',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      <div style={{
+        width: `${pct}%`, height: '100%', background: color, borderRadius: 999,
+        boxShadow: `0 0 12px ${color}55`,
+        transition: 'width .6s cubic-bezier(.2,.8,.2,1)',
+      }} />
+    </div>
+  );
+};
+
+const Money = ({ cents, size = 16, color, showSign }) => {
+  const v = Math.abs(cents);
+  const dollars = Math.floor(v);
+  const rest = (v - dollars).toFixed(2).slice(1); // .XX
+  return (
+    <span style={{
+      fontFamily: FONT, fontWeight: 700, fontSize: size,
+      fontVariantNumeric: 'tabular-nums',
+      color: color || CURRENT.text, letterSpacing: -0.5,
+    }}>
+      {showSign && (cents < 0 ? '−' : '+')}
+      <span style={{ opacity: 0.7, fontSize: size * 0.55, marginRight: 1 }}>$</span>
+      {dollars.toLocaleString()}
+      <span style={{ opacity: 0.55, fontSize: size * 0.5 }}>{rest}</span>
+    </span>
+  );
+};
+
+// Status-bar style styles
+const GLOBAL_CSS = `
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes shimmer { 0% { background-position: -200px 0 } 100% { background-position: 200px 0 } }
+  @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.4 } }
+  @keyframes countup {
+    from { transform: translateY(6px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  * { -webkit-tap-highlight-color: transparent; }
+`;
+
+Object.assign(window, {
+  Btn, Spinner, Card, SectionTitle, Toggle, Chip, CategoryBadge,
+  TxnRow, Progress, Money, GLOBAL_CSS,
+});
+
+
+// ═══ mock-data.jsx ═══
+// mock-data.jsx — shared mock data for Current
+
+const DATA = {
+  safeToSpend: 428.50,
+  periodEnd: 'Mar 28',
+  daysLeft: 11,
+  income: {
+    balance: 1284.12,
+    expected: 1620.00,
+  },
+  accounts: [
+    { id: 'chk', name: 'Everyday Checking',  bank: 'TD Bank',     type: 'Checking', balance: 1284.12, include: true,  spend: true,  save: false },
+    { id: 'sav', name: 'Student Savings',    bank: 'Tangerine',   type: 'Savings',  balance: 2140.00, include: false, spend: false, save: true  },
+    { id: 'crd', name: 'Credit Builder',     bank: 'Neo',         type: 'Credit',   balance: -142.50, include: true,  spend: true,  save: false },
+  ],
+  bills: [
+    { id: 'rent',    name: 'Rent',        due: 'Mar 28', amount: 850.00, cat: 'rent',  days: 11 },
+    { id: 'phone',   name: 'Phone',       due: 'Mar 22', amount: 45.00,  cat: 'phone', days: 5 },
+    { id: 'spotify', name: 'Spotify',     due: 'Mar 19', amount: 10.99,  cat: 'music', days: 2 },
+  ],
+  txns: [
+    { id: 1, merchant: 'Grocery Outlet',   category: 'Groceries',  date: 'Today',     amount: -42.18, cat: 'grocery', account: 'Checking' },
+    { id: 2, merchant: 'TTC Reload',       category: 'Transit',    date: 'Today',     amount: -25.00, cat: 'transit', account: 'Checking' },
+    { id: 3, merchant: 'Coffee Island',    category: 'Dining',     date: 'Yesterday', amount: -6.40,  cat: 'coffee',  account: 'Checking' },
+    { id: 4, merchant: 'Payroll Deposit',  category: 'Income',     date: 'Mar 15',    amount: 1200.00, cat: 'income',  account: 'Checking' },
+    { id: 5, merchant: 'Uber',             category: 'Transit',    date: 'Mar 14',    amount: -18.75, cat: 'transit', account: 'Checking' },
+    { id: 6, merchant: 'Sobeys',           category: 'Groceries',  date: 'Mar 13',    amount: -67.22, cat: 'grocery', account: 'Checking' },
+    { id: 7, merchant: 'Spotify',          category: 'Subscription', date: 'Mar 12',  amount: -10.99, cat: 'music',   account: 'Checking' },
+    { id: 8, merchant: 'Tim Hortons',      category: 'Dining',     date: 'Mar 11',    amount: -4.20,  cat: 'coffee',  account: 'Checking' },
+    { id: 9, merchant: 'Savings Transfer', category: 'Transfer',   date: 'Mar 10',    amount: -100.00, cat: 'savings', account: 'Checking' },
+  ],
+  goals: [
+    { id: 'emergency', name: 'Emergency Fund', target: 2000, saved: 1340, eta: 'Jul 2026' },
+    { id: 'trip',      name: 'Summer Trip',    target: 1500, saved: 640,  eta: 'Jun 2026' },
+    { id: 'laptop',    name: 'New Laptop',     target: 1200, saved: 160,  eta: 'Dec 2026' },
+  ],
+  insights: [
+    { id: 1, text: 'You can spend confidently today.', tone: 'calm' },
+    { id: 2, text: 'Bills are covered through Mar 28.', tone: 'calm' },
+    { id: 3, text: 'Saving pace is up 12% from last month.', tone: 'gold' },
+  ],
+  breakdown: [
+    { id: 'bal',    label: 'Current balance',      amount: 1284.12, sign: '+', note: 'Everyday Checking' },
+    { id: 'inc',    label: 'Expected income',      amount: 336.00,  sign: '+', note: 'Payroll · Mar 22' },
+    { id: 'bills',  label: 'Upcoming bills',       amount: 905.99,  sign: '−', note: 'Rent, Phone, Spotify' },
+    { id: 'save',   label: 'Scheduled savings',    amount: 200.00,  sign: '−', note: 'To Student Savings' },
+    { id: 'buffer', label: 'Safety buffer',        amount: 85.63,   sign: '−', note: '10% of spend runway' },
+  ],
+  // Last 6 weeks spending, normalized
+  spendSeries: [118, 142, 96, 181, 128, 148],
+  spendCats: [
+    { name: 'Groceries', amount: 182.00, color: CURRENT.blue },
+    { name: 'Dining',    amount: 96.40,  color: 'rgba(94,179,255,0.6)' },
+    { name: 'Transit',   amount: 63.75,  color: 'rgba(94,179,255,0.35)' },
+    { name: 'Other',     amount: 41.20,  color: 'rgba(255,255,255,0.22)' },
+  ],
+};
+
+Object.assign(window, { DATA });
+
+
+// ═══ frame.jsx ═══
+// frame.jsx — Current-branded phone frame (replaces iOS default for our dark product)
+
+const PhoneFrame = ({ children, width = 390, height = 844, onDotPress }) => (
+  <div style={{
+    width, height, borderRadius: 48, overflow: 'hidden',
+    position: 'relative', background: CURRENT.bgDeep,
+    boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04), inset 0 0 0 6px #0a0a1a',
+    fontFamily: FONT,
+    WebkitFontSmoothing: 'antialiased',
+    color: CURRENT.text,
+  }}>
+    {/* dynamic island */}
+    <div style={{
+      position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+      width: 120, height: 34, borderRadius: 24, background: '#000', zIndex: 80,
+    }} />
+    {/* status bar (dark) */}
+    <div style={{
+      position: 'absolute', top: 0, left: 0, right: 0, zIndex: 70,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '18px 32px 0', pointerEvents: 'none',
+    }}>
+      <span style={{
+        fontFamily: '-apple-system, "SF Pro", system-ui', fontWeight: 600,
+        fontSize: 15, color: CURRENT.white,
+      }}>9:41</span>
+      <div style={{ display: 'flex', gap: 5, alignItems: 'center', opacity: 0.95 }}>
+        <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="7" width="3" height="4" rx="0.6" fill="#fff"/><rect x="4.5" y="4.5" width="3" height="6.5" rx="0.6" fill="#fff"/><rect x="9" y="2" width="3" height="9" rx="0.6" fill="#fff"/><rect x="13.5" y="0" width="3" height="11" rx="0.6" fill="#fff"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" style={{marginLeft:3}}><path d="M7.5 2.8C9.6 2.8 11.5 3.7 12.8 5L13.8 4c-1.6-1.7-4-2.8-6.3-2.8S2.8 2.3 1.2 4l1 1C3.5 3.7 5.4 2.8 7.5 2.8z" fill="#fff"/><path d="M7.5 6c1.2 0 2.3.5 3.1 1.3l1-1C10.4 5.2 9 4.5 7.5 4.5S4.6 5.2 3.4 6.3l1 1C5.2 6.5 6.3 6 7.5 6z" fill="#fff"/><circle cx="7.5" cy="9.3" r="1.3" fill="#fff"/></svg>
+        <div style={{
+          width: 24, height: 11, border: '1px solid rgba(255,255,255,0.4)',
+          borderRadius: 3, position: 'relative', marginLeft: 2,
+        }}>
+          <div style={{ position: 'absolute', inset: 1.5, background: '#fff', borderRadius: 1.5, width: 18 }} />
+          <div style={{ position: 'absolute', right: -3, top: 3.5, width: 2, height: 4, background: 'rgba(255,255,255,0.4)', borderRadius: '0 1px 1px 0' }} />
+        </div>
+      </div>
+    </div>
+    {children}
+    {/* home indicator */}
+    <div
+      onClick={onDotPress}
+      style={{
+        position: 'absolute', bottom: 7, left: '50%', transform: 'translateX(-50%)',
+        width: 134, height: 5, borderRadius: 999, background: 'rgba(255,255,255,0.35)',
+        zIndex: 90, cursor: onDotPress ? 'pointer' : 'default',
+      }}
+    />
+  </div>
+);
+
+Object.assign(window, { PhoneFrame });
+
+
+// ═══ nav.jsx ═══
+// nav.jsx — bottom tab nav (mobile)
+
+const TABS = [
+  { id: 'home',     label: 'Home',    icon: (active) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1v-9.5z" stroke={active ? CURRENT.blue : CURRENT.textLow} strokeWidth="2" strokeLinejoin="round" fill={active ? 'rgba(94,179,255,0.14)' : 'none'}/></svg>
+  ) },
+  { id: 'txns',     label: 'Activity', icon: (active) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 12h4l3-8 4 16 3-8h4" stroke={active ? CURRENT.blue : CURRENT.textLow} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  ) },
+  { id: 'add',      label: '',        icon: () => (
+    <div style={{
+      width: 54, height: 54, borderRadius: 999, background: CURRENT.blue,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: '0 8px 24px rgba(94,179,255,0.4), 0 0 0 4px rgba(94,179,255,0.12)',
+      marginTop: -28,
+    }}>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke={CURRENT.bgDeep} strokeWidth="2.6" strokeLinecap="round"/></svg>
+    </div>
+  ) },
+  { id: 'savings',  label: 'Savings',  icon: (active) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l2.5 5.5L20 10l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-1.5L12 3z" stroke={active ? CURRENT.gold : CURRENT.textLow} strokeWidth="1.8" strokeLinejoin="round" fill={active ? 'rgba(245,196,0,0.18)' : 'none'}/></svg>
+  ) },
+  { id: 'settings', label: 'Settings', icon: (active) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke={active ? CURRENT.blue : CURRENT.textLow} strokeWidth="2"/><path d="M19.4 15a1.7 1.7 0 00.4 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.4 1.7 1.7 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.9.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.4-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.4-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.4H9a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.4l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.4 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z" stroke={active ? CURRENT.blue : CURRENT.textLow} strokeWidth="1.5"/></svg>
+  ) },
+];
+
+const BottomNav = ({ tab, onTab, onAdd }) => (
+  <div style={{
+    position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 50,
+    paddingBottom: 20, paddingTop: 6,
+    background: `linear-gradient(to top, ${CURRENT.bgDeep} 60%, rgba(26,26,46,0))`,
+  }}>
+    <div style={{
+      margin: '0 14px',
+      background: 'rgba(22,33,62,0.88)',
+      backdropFilter: 'blur(20px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+      borderRadius: 32,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.06)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+      padding: '10px 12px',
+    }}>
+      {TABS.map(t => {
+        const active = tab === t.id;
+        return (
+          <button
+            key={t.id}
+            onClick={() => {
+              if (t.id === 'add') onAdd();
+              else onTab(t.id);
+            }}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              padding: '4px 10px', flex: 1,
+            }}
+          >
+            {t.icon(active)}
+            {t.label && (
+              <span style={{
+                fontSize: 10, fontWeight: 600, letterSpacing: 0.3,
+                color: active ? CURRENT.blue : CURRENT.textLow,
+              }}>{t.label}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
+
+Object.assign(window, { BottomNav });
+
+
+// ═══ screens-home.jsx ═══
+// screens-home.jsx — Home + Breakdown modal
+
+const HomeScreen = ({ onOpenBreakdown, onOpenTxn, refreshing }) => {
+  const d = DATA;
+  return (
+    <div style={{ padding: '0 18px 160px' }}>
+      {/* Pull refresh indicator */}
+      {refreshing && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '0 0 8px', animation: 'fadeIn .2s' }}>
+          <Spinner color={CURRENT.blue} size={16} />
+        </div>
+      )}
+
+      {/* Top row: greeting + avatar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 4px 22px',
+      }}>
+        <div>
+          <div style={{ fontSize: 13, color: CURRENT.textLow, fontWeight: 600 }}>Good afternoon</div>
+          <div style={{ fontSize: 20, color: CURRENT.text, fontWeight: 700, letterSpacing: -0.4 }}>Maya</div>
+        </div>
+        <div style={{
+          width: 40, height: 40, borderRadius: 999,
+          background: 'linear-gradient(135deg, #5EB3FF, #16213E)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, fontSize: 15, color: CURRENT.white,
+          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
+        }}>M</div>
+      </div>
+
+      {/* HERO — Safe-To-Spend */}
+      <div
+        onClick={onOpenBreakdown}
+        style={{
+          padding: '28px 4px 36px', cursor: 'pointer',
+          textAlign: 'center', animation: 'fadeUp .5s ease',
+        }}
+      >
+        <div style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: 2.2,
+          color: CURRENT.textLow, textTransform: 'uppercase', marginBottom: 14,
+        }}>
+          SAFE TO SPEND
+        </div>
+        <div style={{
+          fontFamily: FONT, fontSize: 88, fontWeight: 800,
+          color: CURRENT.blue, letterSpacing: -3.5,
+          lineHeight: 1, fontVariantNumeric: 'tabular-nums',
+          textShadow: '0 0 60px rgba(94,179,255,0.35)',
+          animation: 'countup .6s ease',
+        }}>
+          <span style={{ fontSize: 44, fontWeight: 700, opacity: 0.55, verticalAlign: 'top', marginRight: 2, lineHeight: '1.2' }}>$</span>
+          {Math.floor(d.safeToSpend)}
+          <span style={{ fontSize: 44, fontWeight: 700, opacity: 0.55 }}>.{(d.safeToSpend % 1).toFixed(2).slice(2)}</span>
+        </div>
+        <div style={{
+          marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 8,
+          padding: '7px 14px 7px 16px', borderRadius: 999,
+          background: 'rgba(94,179,255,0.10)',
+          fontSize: 13, fontWeight: 600, color: CURRENT.blue,
+        }}>
+          <span>Until {d.periodEnd} · {d.daysLeft} days</span>
+          <svg width="10" height="10" viewBox="0 0 10 10"><path d="M3 1l4 4-4 4" stroke={CURRENT.blue} strokeWidth="1.8" fill="none" strokeLinecap="round"/></svg>
+        </div>
+      </div>
+
+      {/* Daily runway mini-strip */}
+      <Card padding={16} style={{ marginBottom: 24, background: 'rgba(94,179,255,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 999,
+            background: 'rgba(94,179,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 15, color: CURRENT.blue, fontWeight: 700,
+          }}>✓</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>You can spend <span style={{ color: CURRENT.blue }}>$38.95</span> today and stay safe.</div>
+            <div style={{ fontSize: 12, color: CURRENT.textLow, marginTop: 2 }}>Bills are covered through {d.periodEnd}.</div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Accounts */}
+      <SectionTitle action="All">Accounts</SectionTitle>
+      <div style={{ display: 'flex', gap: 10, overflowX: 'auto', margin: '0 -18px 24px', padding: '0 18px' }}>
+        {d.accounts.map(a => (
+          <div key={a.id} style={{
+            flexShrink: 0, width: 160, background: CURRENT.surface,
+            borderRadius: RADIUS.lg, padding: 16,
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: CURRENT.textLow, letterSpacing: 0.6, textTransform: 'uppercase' }}>
+              {a.bank}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6, color: CURRENT.textMed }}>{a.name}</div>
+            <div style={{ marginTop: 18 }}>
+              <Money cents={a.balance} size={22} color={a.balance < 0 ? CURRENT.textMed : CURRENT.text} />
+            </div>
+            <div style={{
+              marginTop: 10, fontSize: 10, fontWeight: 700, letterSpacing: 1,
+              textTransform: 'uppercase', color: a.include ? CURRENT.blue : CURRENT.textLow,
+            }}>
+              {a.include ? '• Included in safe-to-spend' : '• Not included'}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Savings Progress */}
+      <SectionTitle action="View goals">Savings Progress</SectionTitle>
+      <Card padding={20} style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Emergency Fund</div>
+          <div style={{ fontSize: 13, color: CURRENT.gold, fontWeight: 700 }}>67%</div>
+        </div>
+        <Progress value={1340} max={2000} color={CURRENT.gold} height={10} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 12, color: CURRENT.textMed }}>
+          <span><span style={{ color: CURRENT.text, fontWeight: 700 }}>$1,340</span> saved</span>
+          <span>of $2,000 goal</span>
+        </div>
+      </Card>
+
+      {/* Upcoming Bills */}
+      <SectionTitle action={`${d.bills.length} upcoming`}>Upcoming Bills</SectionTitle>
+      <Card padding={8} style={{ marginBottom: 24 }}>
+        {d.bills.map((b, i) => (
+          <div key={b.id} style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            padding: '14px 12px',
+            borderBottom: i < d.bills.length - 1 ? `1px solid ${CURRENT.border}` : 'none',
+          }}>
+            <CategoryBadge cat={b.cat} size={38} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>{b.name}</div>
+              <div style={{ fontSize: 12, color: CURRENT.textLow, marginTop: 2 }}>
+                {b.due} · {b.days} days
+              </div>
+            </div>
+            <Money cents={-b.amount} size={15} color={CURRENT.textMed} />
+          </div>
+        ))}
+      </Card>
+
+      {/* Recent Transactions */}
+      <SectionTitle action="See all">Recent Activity</SectionTitle>
+      <Card padding={12} style={{ marginBottom: 24 }}>
+        {d.txns.slice(0, 4).map((t, i) => (
+          <div key={t.id} style={{ borderBottom: i < 3 ? `1px solid ${CURRENT.border}` : 'none' }}>
+            <TxnRow {...t} onClick={() => onOpenTxn(t)} />
+          </div>
+        ))}
+      </Card>
+
+      {/* Spending Breakdown */}
+      <SectionTitle>This Week's Spending</SectionTitle>
+      <Card padding={20} style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 18 }}>
+          <Money cents={-383.35} size={28} color={CURRENT.text} />
+          <span style={{ fontSize: 12, color: CURRENT.textLow }}>across 4 categories</span>
+        </div>
+        {/* stacked bar */}
+        <div style={{ display: 'flex', height: 10, borderRadius: 999, overflow: 'hidden', background: 'rgba(255,255,255,0.04)' }}>
+          {d.spendCats.map((c, i) => {
+            const total = d.spendCats.reduce((a, c) => a + c.amount, 0);
+            const pct = (c.amount / total) * 100;
+            return <div key={i} style={{ width: `${pct}%`, background: c.color, boxShadow: i === 0 ? `0 0 12px ${CURRENT.blue}55` : 'none' }} />;
+          })}
+        </div>
+        <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {d.spendCats.map((c, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: c.color }} />
+              <span style={{ flex: 1, color: CURRENT.textMed }}>{c.name}</span>
+              <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>${c.amount.toFixed(0)}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Insights */}
+      <SectionTitle>Insights</SectionTitle>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {d.insights.map(i => (
+          <Card key={i.id} padding={16} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            background: i.tone === 'gold' ? 'rgba(245,196,0,0.07)' : CURRENT.surface,
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 999,
+              background: i.tone === 'gold' ? 'rgba(245,196,0,0.18)' : 'rgba(94,179,255,0.14)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 15, color: i.tone === 'gold' ? CURRENT.gold : CURRENT.blue,
+            }}>{i.tone === 'gold' ? '✦' : '✓'}</div>
+            <div style={{ flex: 1, fontSize: 14, fontWeight: 500, color: CURRENT.text }}>{i.text}</div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── Breakdown modal (bottom sheet) ─────────────────────────
+const BreakdownSheet = ({ open, onClose }) => {
+  if (!open) return null;
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 100,
+      background: 'rgba(10,12,24,0.55)',
+      animation: 'fadeIn .2s ease', backdropFilter: 'blur(4px)',
+    }} onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          background: CURRENT.bgDeep,
+          borderRadius: '32px 32px 0 0',
+          padding: '14px 22px 32px',
+          maxHeight: '86%', overflow: 'auto',
+          animation: 'slideUp .28s cubic-bezier(.2,.8,.2,1)',
+          boxShadow: '0 -20px 40px rgba(0,0,0,0.4)',
+        }}
+      >
+        <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+        <div style={{ width: 40, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.2)', margin: '0 auto 18px' }} />
+        <div style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: 2.2,
+          color: CURRENT.textLow, textTransform: 'uppercase', textAlign: 'center', marginBottom: 8,
+        }}>How we got to</div>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <Money cents={DATA.safeToSpend} size={48} color={CURRENT.blue} />
+        </div>
+
+        <Card padding={4} style={{ marginBottom: 20 }}>
+          {DATA.breakdown.map((row, i) => (
+            <div key={row.id} style={{
+              padding: '16px 16px',
+              borderBottom: i < DATA.breakdown.length - 1 ? `1px solid ${CURRENT.border}` : 'none',
+              display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+            }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8,
+                background: row.sign === '+' ? 'rgba(62,207,142,0.12)' : 'rgba(255,255,255,0.05)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 800, fontSize: 16,
+                color: row.sign === '+' ? CURRENT.green : CURRENT.textMed,
+              }}>{row.sign}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{row.label}</div>
+                <div style={{ fontSize: 12, color: CURRENT.textLow, marginTop: 2 }}>{row.note}</div>
+              </div>
+              <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
+                {row.sign === '+' ? '+' : '−'}${row.amount.toFixed(2)}
+              </div>
+              <svg width="7" height="12" viewBox="0 0 7 12" style={{ marginLeft: 4, opacity: 0.4 }}><path d="M1 1l5 5-5 5" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round"/></svg>
+            </div>
+          ))}
+        </Card>
+
+        <div style={{
+          padding: '18px 20px', borderRadius: RADIUS.lg,
+          background: 'rgba(94,179,255,0.08)',
+          boxShadow: `inset 0 0 0 1px ${CURRENT.borderHi}`,
+          display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, color: CURRENT.textMed, fontWeight: 600 }}>Safe to spend through {DATA.periodEnd}</div>
+            <Money cents={DATA.safeToSpend} size={30} color={CURRENT.blue} />
+          </div>
+          <svg width="40" height="40" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(94,179,255,0.2)" strokeWidth="3"/>
+            <path d="M13 20l5 5 9-10" stroke={CURRENT.blue} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+
+        <Btn full style={{ marginTop: 20 }} onClick={onClose}>Got it</Btn>
+      </div>
+    </div>
+  );
+};
+
+Object.assign(window, { HomeScreen, BreakdownSheet });
+
+
+// ═══ screens-other.jsx ═══
+// screens-other.jsx — Transactions, Add Txn, Savings Insights, Settings, Onboarding, Link Bank
+
+// ─── Transactions ─────────────────────────────────────────────────
+const TxnsScreen = ({ onOpenTxn }) => {
+  const [filter, setFilter] = React.useState('all');
+  const [q, setQ] = React.useState('');
+  const groups = {
+    'Today': DATA.txns.filter(t => t.date === 'Today'),
+    'Yesterday': DATA.txns.filter(t => t.date === 'Yesterday'),
+    'Earlier': DATA.txns.filter(t => !['Today','Yesterday'].includes(t.date)),
+  };
+  return (
+    <div style={{ padding: '0 18px 160px' }}>
+      <div style={{
+        padding: '12px 4px 16px',
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+      }}>
+        <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>Activity</div>
+        <div style={{ fontSize: 12, color: CURRENT.textLow }}>{DATA.txns.length} txns</div>
+      </div>
+
+      {/* Search */}
+      <div style={{
+        background: 'rgba(255,255,255,0.05)', borderRadius: 16,
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '12px 14px', marginBottom: 14,
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="7" stroke={CURRENT.textLow} strokeWidth="2"/>
+          <path d="M20 20l-4-4" stroke={CURRENT.textLow} strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+        <input
+          value={q} onChange={(e) => setQ(e.target.value)}
+          placeholder="Search merchants, categories"
+          style={{
+            flex: 1, background: 'transparent', border: 'none',
+            color: CURRENT.text, fontFamily: FONT, fontSize: 14, outline: 'none',
+          }}
+        />
+      </div>
+
+      {/* Filter chips */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -18px 18px', padding: '0 18px' }}>
+        <Chip active={filter === 'all'} onClick={() => setFilter('all')}>All accounts</Chip>
+        <Chip active={filter === 'chk'} onClick={() => setFilter('chk')}>Checking</Chip>
+        <Chip active={filter === 'sav'} onClick={() => setFilter('sav')}>Savings</Chip>
+        <Chip onClick={() => {}}>This month ▾</Chip>
+      </div>
+
+      {Object.entries(groups).map(([label, items]) => items.length > 0 && (
+        <div key={label} style={{ marginBottom: 20 }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: 1.6, textTransform: 'uppercase',
+            color: CURRENT.textLow, padding: '10px 4px 6px',
+          }}>{label}</div>
+          <Card padding={12}>
+            {items.filter(t => !q || t.merchant.toLowerCase().includes(q.toLowerCase())).map((t, i, arr) => (
+              <div key={t.id} style={{ borderBottom: i < arr.length - 1 ? `1px solid ${CURRENT.border}` : 'none' }}>
+                <TxnRow {...t} onClick={() => onOpenTxn(t)} />
+              </div>
+            ))}
+          </Card>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─── Add Transaction (bottom sheet) ───────────────────────────────
+const AddTxnSheet = ({ open, onClose }) => {
+  const [amt, setAmt] = React.useState('12.40');
+  const [merchant, setMerchant] = React.useState('');
+  const [cat, setCat] = React.useState('Dining');
+  if (!open) return null;
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 100,
+      background: 'rgba(10,12,24,0.55)', backdropFilter: 'blur(4px)',
+      animation: 'fadeIn .2s ease',
+    }} onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          background: CURRENT.bgDeep, borderRadius: '32px 32px 0 0',
+          padding: '14px 22px 28px',
+          animation: 'slideUp .28s cubic-bezier(.2,.8,.2,1)',
+          boxShadow: '0 -20px 40px rgba(0,0,0,0.4)',
+        }}
+      >
+        <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+        <div style={{ width: 40, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.2)', margin: '0 auto 14px' }} />
+        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Add transaction</div>
+
+        {/* Amount — large */}
+        <div style={{
+          textAlign: 'center', padding: '22px 0 26px',
+          background: 'rgba(94,179,255,0.06)', borderRadius: RADIUS.lg, marginBottom: 16,
+        }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: 2, color: CURRENT.textLow,
+            textTransform: 'uppercase', marginBottom: 8,
+          }}>Amount</div>
+          <div style={{ fontSize: 56, fontWeight: 800, color: CURRENT.white, letterSpacing: -2, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ opacity: 0.5, fontSize: 32, fontWeight: 700, verticalAlign: 'top' }}>$</span>
+            {amt}
+          </div>
+        </div>
+
+        {/* Merchant field */}
+        <div style={{ marginBottom: 14 }}>
+          <Label>Merchant</Label>
+          <Input value={merchant} onChange={setMerchant} placeholder="e.g. Loblaws" />
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            {['Grocery Outlet', 'Coffee Island', 'TTC', 'Uber'].map(s => (
+              <Chip key={s} onClick={() => setMerchant(s)}>{s}</Chip>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <Label>Category</Label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {['Groceries', 'Dining', 'Transit', 'Subscriptions', 'Other'].map(c => (
+              <Chip key={c} active={cat === c} onClick={() => setCat(c)}>{c}</Chip>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 22 }}>
+          <Label>Date</Label>
+          <div style={{
+            padding: '14px 16px', borderRadius: 16,
+            background: 'rgba(255,255,255,0.04)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontWeight: 600 }}>Today · Mar 17</span>
+            <svg width="7" height="12" viewBox="0 0 7 12" style={{ opacity: 0.4 }}><path d="M1 1l5 5-5 5" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round"/></svg>
+          </div>
+        </div>
+
+        <Btn full onClick={onClose}>Save transaction</Btn>
+      </div>
+    </div>
+  );
+};
+
+const Label = ({ children }) => (
+  <div style={{
+    fontSize: 11, fontWeight: 700, letterSpacing: 1.4,
+    color: CURRENT.textLow, textTransform: 'uppercase', marginBottom: 8,
+  }}>{children}</div>
+);
+
+const Input = ({ value, onChange, placeholder, type = 'text' }) => (
+  <input
+    type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+    style={{
+      width: '100%', padding: '14px 16px', borderRadius: 16,
+      background: 'rgba(255,255,255,0.04)', border: 'none',
+      color: CURRENT.text, fontFamily: FONT, fontSize: 15, outline: 'none',
+      boxSizing: 'border-box',
+    }}
+  />
+);
+
+// ─── Savings Insights ─────────────────────────────────────────────
+const SavingsScreen = () => {
+  const g = DATA.goals[0];
+  const pct = Math.round((g.saved / g.target) * 100);
+  // 12-week growth series
+  const series = [820, 890, 940, 985, 1010, 1085, 1120, 1180, 1205, 1260, 1305, 1340];
+  const maxS = Math.max(...series);
+  return (
+    <div style={{ padding: '0 18px 160px' }}>
+      <div style={{ padding: '12px 4px 22px' }}>
+        <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>Savings</div>
+        <div style={{ fontSize: 13, color: CURRENT.textLow, marginTop: 4 }}>Where your future sits.</div>
+      </div>
+
+      {/* Goal hero — gold */}
+      <Card padding={26} style={{
+        marginBottom: 18,
+        background: 'linear-gradient(160deg, rgba(245,196,0,0.14), rgba(22,33,62,0.6))',
+        boxShadow: `inset 0 0 0 1px rgba(245,196,0,0.22)`,
+      }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: CURRENT.gold, marginBottom: 12, textTransform: 'uppercase' }}>
+          Primary goal · Emergency Fund
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 18 }}>
+          <Money cents={g.saved} size={48} color={CURRENT.gold} />
+          <span style={{ fontSize: 14, color: CURRENT.textMed }}>/ ${g.target}</span>
+        </div>
+        <Progress value={g.saved} max={g.target} color={CURRENT.gold} height={10} />
+        <div style={{
+          marginTop: 14, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: CURRENT.textMed,
+        }}>
+          <span>{pct}% funded</span>
+          <span>ETA {g.eta}</span>
+        </div>
+      </Card>
+
+      {/* Growth chart */}
+      <Card padding={20} style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+          <SectionTitle>12-Week Growth</SectionTitle>
+          <div style={{ fontSize: 12, color: CURRENT.gold, fontWeight: 700 }}>+12%</div>
+        </div>
+        <svg viewBox="0 0 320 120" style={{ width: '100%', height: 140, marginTop: 4 }} preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="goldGrad" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor={CURRENT.gold} stopOpacity="0.35"/>
+              <stop offset="100%" stopColor={CURRENT.gold} stopOpacity="0"/>
+            </linearGradient>
+          </defs>
+          {(() => {
+            const pts = series.map((v, i) => {
+              const x = (i / (series.length - 1)) * 320;
+              const y = 110 - ((v / maxS) * 90);
+              return [x, y];
+            });
+            const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ');
+            const area = `${path} L320,120 L0,120 Z`;
+            return (
+              <>
+                <path d={area} fill="url(#goldGrad)" />
+                <path d={path} fill="none" stroke={CURRENT.gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                {pts.map((p, i) => i === pts.length - 1 && (
+                  <circle key={i} cx={p[0]} cy={p[1]} r="5" fill={CURRENT.gold} />
+                ))}
+                {pts.map((p, i) => i === pts.length - 1 && (
+                  <circle key={'o'+i} cx={p[0]} cy={p[1]} r="10" fill={CURRENT.gold} opacity="0.25" />
+                ))}
+              </>
+            );
+          })()}
+        </svg>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: CURRENT.textLow, marginTop: 4 }}>
+          <span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span>
+        </div>
+      </Card>
+
+      {/* Goals list */}
+      <SectionTitle action="New goal">All goals</SectionTitle>
+      <Card padding={8} style={{ marginBottom: 20 }}>
+        {DATA.goals.map((g, i) => (
+          <div key={g.id} style={{
+            padding: '16px 12px',
+            borderBottom: i < DATA.goals.length - 1 ? `1px solid ${CURRENT.border}` : 'none',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>{g.name}</div>
+              <div style={{ fontSize: 13, color: CURRENT.textMed, fontVariantNumeric: 'tabular-nums' }}>
+                ${g.saved} <span style={{ opacity: 0.5 }}>/ ${g.target}</span>
+              </div>
+            </div>
+            <Progress value={g.saved} max={g.target} color={CURRENT.gold} height={6} />
+          </div>
+        ))}
+      </Card>
+
+      {/* Insights */}
+      <SectionTitle>Insights</SectionTitle>
+      <Card padding={18} style={{ marginBottom: 10, background: 'rgba(245,196,0,0.06)' }}>
+        <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>
+          You've saved <span style={{ color: CURRENT.gold }}>$190 more</span> this month than last.
+          At this pace, you'll hit your Emergency Fund goal by <strong>July 2026</strong>.
+        </div>
+      </Card>
+      <Card padding={18}>
+        <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>
+          Your auto-save of <span style={{ color: CURRENT.gold }}>$50/week</span> is the biggest contributor.
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+// ─── Settings ─────────────────────────────────────────────────────
+const SettingsScreen = () => {
+  const [notif, setNotif] = React.useState(true);
+  const [biometric, setBiometric] = React.useState(true);
+  const [darkMode, setDarkMode] = React.useState(true);
+  return (
+    <div style={{ padding: '0 18px 160px' }}>
+      <div style={{ padding: '12px 4px 22px' }}>
+        <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>Settings</div>
+      </div>
+
+      {/* Profile card */}
+      <Card padding={20} style={{ marginBottom: 22, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{
+          width: 54, height: 54, borderRadius: 999,
+          background: 'linear-gradient(135deg, #5EB3FF, #16213E)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, fontSize: 20, color: CURRENT.white,
+        }}>M</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 17, fontWeight: 700 }}>Maya Osei</div>
+          <div style={{ fontSize: 13, color: CURRENT.textLow }}>maya@student.ca</div>
+        </div>
+        <Btn variant="ghost" size="md">Edit</Btn>
+      </Card>
+
+      <SettingsGroup title="Accounts">
+        <Row title="Linked banks" detail="3 connected" />
+        <Row title="Account categorization" detail="Review" />
+        <Row title="Add another account" detail="" arrow />
+      </SettingsGroup>
+
+      <SettingsGroup title="Income & Goals">
+        <Row title="Expected income" detail="$1,620 / mo" />
+        <Row title="Auto-save rules" detail="$50 / wk" />
+        <Row title="Savings goals" detail="3 active" />
+      </SettingsGroup>
+
+      <SettingsGroup title="Bills">
+        <Row title="Recurring bills" detail="3 tracked" />
+        <Row title="Bill reminders" toggle={<Toggle on={notif} onChange={setNotif} />} />
+      </SettingsGroup>
+
+      <SettingsGroup title="Preferences">
+        <Row title="Biometric sign-in" toggle={<Toggle on={biometric} onChange={setBiometric} />} />
+        <Row title="Dark mode" toggle={<Toggle on={darkMode} onChange={setDarkMode} />} />
+        <Row title="Safe-To-Spend buffer" detail="10%" />
+      </SettingsGroup>
+
+      <div style={{ textAlign: 'center', marginTop: 30, fontSize: 12, color: CURRENT.textLow }}>
+        Current · v2.4.1
+      </div>
+    </div>
+  );
+};
+
+const SettingsGroup = ({ title, children }) => (
+  <div style={{ marginBottom: 22 }}>
+    <SectionTitle>{title}</SectionTitle>
+    <Card padding={4}>{children}</Card>
+  </div>
+);
+
+const Row = ({ title, detail, toggle, arrow }) => (
+  <div style={{
+    padding: '16px 16px', display: 'flex', alignItems: 'center', gap: 12,
+    borderBottom: `1px solid ${CURRENT.border}`,
+  }}>
+    <div style={{ flex: 1, fontSize: 15, fontWeight: 500 }}>{title}</div>
+    {toggle || (
+      <>
+        {detail && <span style={{ fontSize: 14, color: CURRENT.textLow }}>{detail}</span>}
+        {(detail || arrow) && (
+          <svg width="7" height="12" viewBox="0 0 7 12" style={{ opacity: 0.4 }}><path d="M1 1l5 5-5 5" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round"/></svg>
+        )}
+      </>
+    )}
+  </div>
+);
+
+// ─── Onboarding ───────────────────────────────────────────────────
+const OnboardingScreen = ({ slide, onNext, onSkip }) => {
+  const slides = [
+    { title: 'Stop guessing what you can spend.', body: 'One calm number tells you what you can spend today without wrecking next week.' },
+    { title: 'Real-time Safe-To-Spend.', body: 'Link your accounts and watch one signal update quietly in the background.' },
+    { title: 'Built on income, bills, and goals.', body: 'We do the math — you get a number you can trust. Tap it anytime to see how.' },
+  ];
+  const s = slides[slide];
+  return (
+    <div style={{
+      height: '100%', padding: '68px 28px 40px', display: 'flex', flexDirection: 'column',
+      background: `radial-gradient(circle at 50% 28%, rgba(94,179,255,0.16), transparent 50%), ${CURRENT.bgDeep}`,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          fontWeight: 800, fontSize: 17, letterSpacing: -0.3,
+        }}>
+          <div style={{
+            width: 26, height: 26, borderRadius: 8,
+            background: CURRENT.blue,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: CURRENT.bgDeep, fontWeight: 900, fontSize: 15,
+          }}>C</div>
+          Current
+        </div>
+        <button onClick={onSkip} style={{
+          background: 'transparent', border: 'none', color: CURRENT.textMed,
+          fontFamily: FONT, fontWeight: 600, fontSize: 14, cursor: 'pointer',
+        }}>Skip</button>
+      </div>
+
+      {/* Illustration-free visual anchor */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', marginTop: -20,
+      }}>
+        <div style={{
+          width: 200, height: 200, borderRadius: 999,
+          background: 'radial-gradient(circle, rgba(94,179,255,0.25), rgba(94,179,255,0) 70%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          marginBottom: 30,
+        }}>
+          <div style={{
+            fontSize: 72, fontWeight: 800, color: CURRENT.blue,
+            letterSpacing: -3, textShadow: '0 0 40px rgba(94,179,255,0.5)',
+          }}>
+            <span style={{ fontSize: 36, opacity: 0.6 }}>$</span>428
+          </div>
+        </div>
+        <h1 style={{
+          fontSize: 32, fontWeight: 800, textAlign: 'center',
+          letterSpacing: -1, lineHeight: 1.1, margin: 0, textWrap: 'balance',
+        }}>{s.title}</h1>
+        <p style={{
+          fontSize: 15, color: CURRENT.textMed, textAlign: 'center',
+          marginTop: 16, lineHeight: 1.5, textWrap: 'pretty', maxWidth: 300,
+        }}>{s.body}</p>
+      </div>
+
+      {/* Pagination */}
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 22 }}>
+        {[0,1,2].map(i => (
+          <div key={i} style={{
+            width: i === slide ? 22 : 6, height: 6, borderRadius: 999,
+            background: i === slide ? CURRENT.blue : 'rgba(255,255,255,0.2)',
+            transition: 'width .2s ease',
+          }} />
+        ))}
+      </div>
+
+      <Btn full onClick={onNext}>{slide === 2 ? 'Get started' : 'Continue'}</Btn>
+    </div>
+  );
+};
+
+// ─── Link Bank ────────────────────────────────────────────────────
+const LinkBankScreen = ({ state = 'default', onLink, onRetry }) => (
+  <div style={{
+    height: '100%', padding: '68px 28px 40px', display: 'flex', flexDirection: 'column',
+    background: `radial-gradient(circle at 50% 0%, rgba(94,179,255,0.14), transparent 55%), ${CURRENT.bgDeep}`,
+  }}>
+    <div style={{ fontSize: 13, fontWeight: 700, color: CURRENT.blue, letterSpacing: 1.6, textTransform: 'uppercase' }}>
+      Step 2 of 3
+    </div>
+    <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: -0.8, margin: '10px 0 10px' }}>Link your bank</h1>
+    <p style={{ fontSize: 15, color: CURRENT.textMed, lineHeight: 1.5, margin: '0 0 28px' }}>
+      Securely connect to calculate your Safe-To-Spend. Your credentials never touch our servers.
+    </p>
+
+    <Card padding={24} style={{ marginBottom: 16 }}>
+      {state === 'default' && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+            <div style={{
+              width: 46, height: 46, borderRadius: 14,
+              background: 'rgba(94,179,255,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="6" width="18" height="12" rx="2" stroke={CURRENT.blue} strokeWidth="2"/>
+                <path d="M3 10h18" stroke={CURRENT.blue} strokeWidth="2"/>
+                <path d="M7 14h4" stroke={CURRENT.blue} strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>Connect via Plaid</div>
+              <div style={{ fontSize: 12, color: CURRENT.textLow, marginTop: 2 }}>Works with 12,000+ institutions</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+            {['TD', 'RBC', 'BMO', 'Scotia', 'Neo', 'Tangerine'].map(b => (
+              <div key={b} style={{
+                padding: '8px 12px', borderRadius: 10,
+                background: 'rgba(255,255,255,0.05)',
+                fontSize: 12, fontWeight: 600, color: CURRENT.textMed,
+              }}>{b}</div>
+            ))}
+          </div>
+          <Btn full onClick={onLink}>Link bank account</Btn>
+        </>
+      )}
+      {state === 'loading' && (
+        <div style={{ padding: '16px 4px', textAlign: 'center' }}>
+          <Spinner size={32} />
+          <div style={{ marginTop: 18, fontSize: 15, fontWeight: 600 }}>Fetching your accounts…</div>
+          <div style={{ fontSize: 12, color: CURRENT.textLow, marginTop: 6 }}>This usually takes 10–20 seconds.</div>
+        </div>
+      )}
+      {state === 'error' && (
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 999, margin: '8px auto 14px',
+            background: 'rgba(255,255,255,0.06)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 22, color: CURRENT.textMed,
+          }}>!</div>
+          <div style={{ fontSize: 17, fontWeight: 700 }}>We couldn't connect</div>
+          <div style={{ fontSize: 13, color: CURRENT.textMed, marginTop: 6, lineHeight: 1.45 }}>
+            Your bank asked for another verification step. Let's try again.
+          </div>
+          <Btn full style={{ marginTop: 20 }} onClick={onRetry}>Try again</Btn>
+        </div>
+      )}
+    </Card>
+
+    <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 12, color: CURRENT.textLow, padding: '4px 8px' }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2l7 3v6c0 5-3 9-7 11-4-2-7-6-7-11V5l7-3z" stroke={CURRENT.textLow} strokeWidth="1.8" strokeLinejoin="round"/>
+      </svg>
+      Bank-grade 256-bit encryption · Read-only access
+    </div>
+  </div>
+);
+
+Object.assign(window, {
+  TxnsScreen, AddTxnSheet, SavingsScreen, SettingsScreen, OnboardingScreen, LinkBankScreen,
+});
+
+
+// ═══ web-screens.jsx ═══
+// web-screens.jsx — Web (desktop) layouts for Current
+
+const WebShell = ({ children, tab = 'home', onTab }) => (
+  <div style={{
+    width: 1440, minHeight: 900,
+    background: CURRENT.bgDeep, color: CURRENT.text, fontFamily: FONT,
+    display: 'flex', flexDirection: 'column',
+    boxShadow: '0 40px 100px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)',
+    borderRadius: 16, overflow: 'hidden',
+  }}>
+    {/* Top bar */}
+    <div style={{
+      height: 72, padding: '0 40px',
+      display: 'flex', alignItems: 'center', gap: 40,
+      borderBottom: `1px solid ${CURRENT.border}`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 800, fontSize: 18, letterSpacing: -0.3 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8, background: CURRENT.blue,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: CURRENT.bgDeep, fontWeight: 900, fontSize: 16,
+        }}>C</div>
+        Current
+      </div>
+      <div style={{ display: 'flex', gap: 2, flex: 1 }}>
+        {['home', 'txns', 'savings', 'settings'].map(t => {
+          const labels = { home: 'Home', txns: 'Transactions', savings: 'Savings', settings: 'Settings' };
+          const active = tab === t;
+          return (
+            <button key={t} onClick={() => onTab && onTab(t)} style={{
+              padding: '8px 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
+              background: active ? 'rgba(94,179,255,0.12)' : 'transparent',
+              color: active ? CURRENT.blue : CURRENT.textMed,
+              fontFamily: FONT, fontWeight: 600, fontSize: 14,
+              transition: 'all .15s',
+            }}>{labels[t]}</button>
+          );
+        })}
+      </div>
+      {/* Account switcher */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '6px 14px 6px 8px',
+        background: 'rgba(255,255,255,0.04)', borderRadius: 999,
+      }}>
+        <div style={{ width: 26, height: 26, borderRadius: 999, background: 'linear-gradient(135deg, #5EB3FF, #16213E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>M</div>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>Maya</span>
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3l3 3 3-3" stroke={CURRENT.textLow} strokeWidth="1.6" fill="none"/></svg>
+      </div>
+      {/* Notifications */}
+      <button style={{
+        width: 38, height: 38, borderRadius: 999, background: 'rgba(255,255,255,0.04)',
+        border: 'none', cursor: 'pointer', position: 'relative',
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ display: 'block', margin: 'auto' }}>
+          <path d="M6 8a6 6 0 1112 0v4l2 3H4l2-3V8zm3 9a3 3 0 006 0" stroke={CURRENT.textMed} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <div style={{ position: 'absolute', top: 9, right: 10, width: 7, height: 7, borderRadius: 999, background: CURRENT.blue }} />
+      </button>
+    </div>
+
+    <div style={{ padding: '36px 40px 60px', maxWidth: 1280, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      {children}
+    </div>
+  </div>
+);
+
+const WebHome = () => {
+  const d = DATA;
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 14, color: CURRENT.textLow, fontWeight: 600 }}>Good afternoon, Maya</div>
+          <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.8, marginTop: 4 }}>Monday, March 17</div>
+        </div>
+        <Btn size="md" variant="secondary">Export statement</Btn>
+      </div>
+
+      {/* Hero row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 20 }}>
+        <Card padding={40} style={{ background: 'linear-gradient(135deg, rgba(94,179,255,0.08), rgba(22,33,62,1) 70%)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2.2, color: CURRENT.textLow, textTransform: 'uppercase', marginBottom: 14 }}>
+            Safe to Spend · Until {d.periodEnd}
+          </div>
+          <div style={{
+            fontSize: 140, fontWeight: 800, color: CURRENT.blue,
+            letterSpacing: -6, lineHeight: 0.95,
+            textShadow: '0 0 80px rgba(94,179,255,0.3)', fontVariantNumeric: 'tabular-nums',
+          }}>
+            <span style={{ fontSize: 64, fontWeight: 700, opacity: 0.55, verticalAlign: 'top', marginRight: 2 }}>$</span>
+            {Math.floor(d.safeToSpend)}
+            <span style={{ fontSize: 64, fontWeight: 700, opacity: 0.55 }}>.{(d.safeToSpend % 1).toFixed(2).slice(2)}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 28 }}>
+            <div style={{
+              padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, color: CURRENT.blue,
+              background: 'rgba(94,179,255,0.1)',
+            }}>{d.daysLeft} days left</div>
+            <div style={{
+              padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, color: CURRENT.textMed,
+              background: 'rgba(255,255,255,0.04)',
+            }}>$38.95 / day runway</div>
+            <div style={{
+              padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, color: CURRENT.textMed,
+              background: 'rgba(255,255,255,0.04)', cursor: 'pointer',
+            }}>See the math →</div>
+          </div>
+        </Card>
+
+        <Card padding={28} style={{
+          background: 'linear-gradient(160deg, rgba(245,196,0,0.12), rgba(22,33,62,1) 70%)',
+          boxShadow: 'inset 0 0 0 1px rgba(245,196,0,0.2)',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: CURRENT.gold, marginBottom: 12, textTransform: 'uppercase' }}>
+            Emergency Fund
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 18 }}>
+            <Money cents={1340} size={34} color={CURRENT.gold} />
+            <span style={{ fontSize: 14, color: CURRENT.textMed }}>/ $2,000</span>
+          </div>
+          <Progress value={1340} max={2000} color={CURRENT.gold} height={10} />
+          <div style={{ marginTop: 14, fontSize: 13, color: CURRENT.textMed }}>
+            On pace to finish by <strong style={{ color: CURRENT.text }}>Jul 2026</strong>.
+          </div>
+          <Btn size="md" variant="ghost" style={{ marginTop: 14, padding: 0 }}>View all goals →</Btn>
+        </Card>
+      </div>
+
+      {/* Lower grid: 2/3 left + 1/3 right */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Accounts */}
+          <div>
+            <SectionTitle action="Manage accounts">Accounts</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+              {d.accounts.map(a => (
+                <Card key={a.id} padding={20}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: CURRENT.textLow, textTransform: 'uppercase' }}>{a.bank}</div>
+                  <div style={{ fontSize: 13, color: CURRENT.textMed, marginTop: 4 }}>{a.name}</div>
+                  <div style={{ marginTop: 16 }}>
+                    <Money cents={a.balance} size={22} color={a.balance < 0 ? CURRENT.textMed : CURRENT.text} />
+                  </div>
+                  <div style={{
+                    marginTop: 10, fontSize: 10, fontWeight: 700, letterSpacing: 1,
+                    textTransform: 'uppercase', color: a.include ? CURRENT.blue : CURRENT.textLow,
+                  }}>
+                    {a.include ? 'Included' : 'Not included'}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent transactions */}
+          <div>
+            <SectionTitle action="See all">Recent Activity</SectionTitle>
+            <Card padding={16}>
+              {d.txns.slice(0, 6).map((t, i) => (
+                <div key={t.id} style={{ borderBottom: i < 5 ? `1px solid ${CURRENT.border}` : 'none' }}>
+                  <TxnRow {...t} />
+                </div>
+              ))}
+            </Card>
+          </div>
+
+          {/* Spending breakdown */}
+          <div>
+            <SectionTitle>This Month's Spending</SectionTitle>
+            <Card padding={28}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 20 }}>
+                <Money cents={-383.35} size={36} color={CURRENT.text} />
+                <span style={{ fontSize: 13, color: CURRENT.textLow }}>across 4 categories · 23 transactions</span>
+              </div>
+              <div style={{ display: 'flex', height: 12, borderRadius: 999, overflow: 'hidden', background: 'rgba(255,255,255,0.04)' }}>
+                {d.spendCats.map((c, i) => {
+                  const total = d.spendCats.reduce((a, c) => a + c.amount, 0);
+                  const pct = (c.amount / total) * 100;
+                  return <div key={i} style={{ width: `${pct}%`, background: c.color }} />;
+                })}
+              </div>
+              <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
+                {d.spendCats.map((c, i) => (
+                  <div key={i}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: c.color }} />
+                      <span style={{ fontSize: 12, color: CURRENT.textMed }}>{c.name}</span>
+                    </div>
+                    <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.4 }}>${c.amount.toFixed(0)}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* Right rail */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div>
+            <SectionTitle>Upcoming Bills</SectionTitle>
+            <Card padding={8}>
+              {d.bills.map((b, i) => (
+                <div key={b.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '14px 12px',
+                  borderBottom: i < d.bills.length - 1 ? `1px solid ${CURRENT.border}` : 'none',
+                }}>
+                  <CategoryBadge cat={b.cat} size={36} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{b.name}</div>
+                    <div style={{ fontSize: 11, color: CURRENT.textLow }}>{b.due}</div>
+                  </div>
+                  <Money cents={-b.amount} size={14} color={CURRENT.textMed} />
+                </div>
+              ))}
+            </Card>
+          </div>
+
+          <div>
+            <SectionTitle>Insights</SectionTitle>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {d.insights.map(i => (
+                <Card key={i.id} padding={16} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                  background: i.tone === 'gold' ? 'rgba(245,196,0,0.07)' : CURRENT.surface,
+                }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 999, flexShrink: 0,
+                    background: i.tone === 'gold' ? 'rgba(245,196,0,0.18)' : 'rgba(94,179,255,0.14)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 13, color: i.tone === 'gold' ? CURRENT.gold : CURRENT.blue, fontWeight: 700,
+                  }}>{i.tone === 'gold' ? '✦' : '✓'}</div>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 500, lineHeight: 1.45 }}>{i.text}</div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const WebTxns = () => (
+  <div>
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ fontSize: 14, color: CURRENT.textLow, fontWeight: 600 }}>March 2026</div>
+      <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1.2, marginTop: 4 }}>Transactions</div>
+      <div style={{ fontSize: 14, color: CURRENT.textMed, marginTop: 6 }}>{DATA.txns.length} transactions · $383.35 spent this week</div>
+    </div>
+
+    {/* Filter bar */}
+    <Card padding={16} style={{ marginBottom: 20, display: 'flex', gap: 10, alignItems: 'center' }}>
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', gap: 10,
+        padding: '10px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.04)',
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke={CURRENT.textLow} strokeWidth="2"/><path d="M20 20l-4-4" stroke={CURRENT.textLow} strokeWidth="2" strokeLinecap="round"/></svg>
+        <input placeholder="Search merchants, categories" style={{
+          flex: 1, background: 'transparent', border: 'none',
+          color: CURRENT.text, fontFamily: FONT, fontSize: 14, outline: 'none',
+        }}/>
+      </div>
+      <Chip active>All accounts</Chip>
+      <Chip>This month</Chip>
+      <Chip>All categories</Chip>
+    </Card>
+
+    <Card padding={4}>
+      <div style={{
+        display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto',
+        padding: '14px 20px', fontSize: 11, fontWeight: 700, color: CURRENT.textLow,
+        letterSpacing: 1.4, textTransform: 'uppercase',
+        borderBottom: `1px solid ${CURRENT.border}`,
+      }}>
+        <div>Merchant</div><div>Category</div><div>Account</div><div>Date</div><div style={{ textAlign: 'right' }}>Amount</div>
+      </div>
+      {DATA.txns.map((t, i) => {
+        const pos = t.amount > 0;
+        return (
+          <div key={t.id} style={{
+            display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto',
+            padding: '18px 20px', alignItems: 'center',
+            borderBottom: i < DATA.txns.length - 1 ? `1px solid ${CURRENT.border}` : 'none',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <CategoryBadge cat={t.cat} size={36} />
+              <div style={{ fontSize: 15, fontWeight: 600 }}>{t.merchant}</div>
+            </div>
+            <div style={{ fontSize: 13, color: CURRENT.textMed }}>{t.category}</div>
+            <div style={{ fontSize: 13, color: CURRENT.textMed }}>{t.account}</div>
+            <div style={{ fontSize: 13, color: CURRENT.textMed }}>{t.date}</div>
+            <div style={{
+              fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums', textAlign: 'right',
+              color: pos ? CURRENT.green : CURRENT.text, minWidth: 100,
+            }}>{pos ? '+' : '−'}${Math.abs(t.amount).toFixed(2)}</div>
+          </div>
+        );
+      })}
+    </Card>
+  </div>
+);
+
+Object.assign(window, { WebShell, WebHome, WebTxns });
+
+
+// ═══ design-canvas.jsx ═══
+
+// DesignCanvas.jsx — Figma-ish design canvas wrapper
+// Warm gray grid bg + Sections + Artboards + PostIt notes.
+// No assets, no deps.
+
+const DC = {
+  bg: '#f0eee9',
+  grid: 'rgba(0,0,0,0.06)',
+  label: 'rgba(60,50,40,0.7)',
+  title: 'rgba(40,30,20,0.85)',
+  subtitle: 'rgba(60,50,40,0.6)',
+  postitBg: '#fef4a8',
+  postitText: '#5a4a2a',
+  font: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+};
+
+// ─────────────────────────────────────────────────────────────
+// Main canvas — transform-based pan/zoom viewport
+//
+// Input mapping (Figma-style):
+//   • trackpad pinch  → zoom   (ctrlKey wheel; Safari gesture* events)
+//   • trackpad scroll → pan    (two-finger)
+//   • mouse wheel     → zoom   (notched; distinguished from trackpad scroll)
+//   • middle-drag / primary-drag-on-bg → pan
+//
+// Transform state lives in a ref and is written straight to the DOM
+// (translate3d + will-change) so wheel ticks don't go through React —
+// keeps pans at 60fps on dense canvases.
+// ─────────────────────────────────────────────────────────────
+function DesignCanvas({ children, minScale = 0.1, maxScale = 8, style = {} }) {
+  const vpRef = React.useRef(null);
+  const worldRef = React.useRef(null);
+  const tf = React.useRef({ x: 0, y: 0, scale: 1 });
+
+  const apply = React.useCallback(() => {
+    const { x, y, scale } = tf.current;
+    const el = worldRef.current;
+    if (el) el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+  }, []);
+
+  React.useEffect(() => {
+    const vp = vpRef.current;
+    if (!vp) return;
+
+    const zoomAt = (cx, cy, factor) => {
+      const r = vp.getBoundingClientRect();
+      const px = cx - r.left, py = cy - r.top;
+      const t = tf.current;
+      const next = Math.min(maxScale, Math.max(minScale, t.scale * factor));
+      const k = next / t.scale;
+      // keep the world point under the cursor fixed
+      t.x = px - (px - t.x) * k;
+      t.y = py - (py - t.y) * k;
+      t.scale = next;
+      apply();
+    };
+
+    // Mouse-wheel vs trackpad-scroll heuristic. A physical wheel sends
+    // line-mode deltas (Firefox) or large integer pixel deltas with no X
+    // component (Chrome/Safari, typically multiples of 100/120). Trackpad
+    // two-finger scroll sends small/fractional pixel deltas, often with
+    // non-zero deltaX. ctrlKey is set by the browser for trackpad pinch.
+    const isMouseWheel = (e) =>
+      e.deltaMode !== 0 ||
+      (e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 40);
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      if (isGesturing) return; // Safari: gesture* owns the pinch — discard concurrent wheels
+      if (e.ctrlKey) {
+        // trackpad pinch (or explicit ctrl+wheel)
+        zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.01));
+      } else if (isMouseWheel(e)) {
+        // notched mouse wheel — fixed-ratio step per click
+        zoomAt(e.clientX, e.clientY, Math.exp(-Math.sign(e.deltaY) * 0.18));
+      } else {
+        // trackpad two-finger scroll — pan
+        tf.current.x -= e.deltaX;
+        tf.current.y -= e.deltaY;
+        apply();
+      }
+    };
+
+    // Safari sends native gesture* events for trackpad pinch with a smooth
+    // e.scale; preferring these over the ctrl+wheel fallback gives a much
+    // better feel there. No-ops on other browsers. Safari also fires
+    // ctrlKey wheel events during the same pinch — isGesturing makes
+    // onWheel drop those entirely so they neither zoom nor pan.
+    let gsBase = 1;
+    let isGesturing = false;
+    const onGestureStart = (e) => { e.preventDefault(); isGesturing = true; gsBase = tf.current.scale; };
+    const onGestureChange = (e) => {
+      e.preventDefault();
+      zoomAt(e.clientX, e.clientY, (gsBase * e.scale) / tf.current.scale);
+    };
+    const onGestureEnd = (e) => { e.preventDefault(); isGesturing = false; };
+
+    // Drag-pan: middle button anywhere, or primary button starting on the
+    // canvas background (not inside an artboard).
+    let drag = null;
+    const onPointerDown = (e) => {
+      const onBg = e.target === vp || e.target === worldRef.current;
+      if (!(e.button === 1 || (e.button === 0 && onBg))) return;
+      e.preventDefault();
+      vp.setPointerCapture(e.pointerId);
+      drag = { id: e.pointerId, lx: e.clientX, ly: e.clientY };
+      vp.style.cursor = 'grabbing';
+    };
+    const onPointerMove = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      tf.current.x += e.clientX - drag.lx;
+      tf.current.y += e.clientY - drag.ly;
+      drag.lx = e.clientX; drag.ly = e.clientY;
+      apply();
+    };
+    const onPointerUp = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      vp.releasePointerCapture(e.pointerId);
+      drag = null;
+      vp.style.cursor = '';
+    };
+
+    vp.addEventListener('wheel', onWheel, { passive: false });
+    vp.addEventListener('gesturestart', onGestureStart, { passive: false });
+    vp.addEventListener('gesturechange', onGestureChange, { passive: false });
+    vp.addEventListener('gestureend', onGestureEnd, { passive: false });
+    vp.addEventListener('pointerdown', onPointerDown);
+    vp.addEventListener('pointermove', onPointerMove);
+    vp.addEventListener('pointerup', onPointerUp);
+    vp.addEventListener('pointercancel', onPointerUp);
+    return () => {
+      vp.removeEventListener('wheel', onWheel);
+      vp.removeEventListener('gesturestart', onGestureStart);
+      vp.removeEventListener('gesturechange', onGestureChange);
+      vp.removeEventListener('gestureend', onGestureEnd);
+      vp.removeEventListener('pointerdown', onPointerDown);
+      vp.removeEventListener('pointermove', onPointerMove);
+      vp.removeEventListener('pointerup', onPointerUp);
+      vp.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, [apply, minScale, maxScale]);
+
+  const gridSvg = `url("data:image/svg+xml,%3Csvg width='120' height='120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M120 0H0v120' fill='none' stroke='${encodeURIComponent(DC.grid)}' stroke-width='1'/%3E%3C/svg%3E")`;
+  return (
+    <div
+      ref={vpRef}
+      className="design-canvas"
+      style={{
+        height: '100vh', width: '100vw',
+        background: DC.bg,
+        overflow: 'hidden',
+        overscrollBehavior: 'none',
+        touchAction: 'none',
+        position: 'relative',
+        fontFamily: DC.font,
+        boxSizing: 'border-box',
+        ...style,
+      }}
+    >
+      <div
+        ref={worldRef}
+        style={{
+          position: 'absolute', top: 0, left: 0,
+          transformOrigin: '0 0',
+          willChange: 'transform',
+          width: 'max-content', minWidth: '100%',
+          minHeight: '100%',
+          padding: '60px 0 80px',
+          backgroundImage: gridSvg,
+          backgroundSize: '120px 120px',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Section — title + subtitle + h-stack of artboards (no wrap)
+// ─────────────────────────────────────────────────────────────
+function DCSection({ title, subtitle, children, gap = 48 }) {
+  return (
+    <div style={{ marginBottom: 80, position: 'relative' }}>
+      <div style={{ padding: '0 60px 36px' }}>
+        <div style={{
+          fontSize: 22, fontWeight: 600, color: DC.title,
+          letterSpacing: -0.3, marginBottom: 4,
+        }}>{title}</div>
+        {subtitle && (
+          <div style={{
+            fontSize: 14, fontWeight: 400, color: DC.subtitle,
+          }}>{subtitle}</div>
+        )}
+      </div>
+      {/* h-stack — clips offscreen, never wraps */}
+      <div style={{
+        display: 'flex', gap, padding: '0 60px',
+        alignItems: 'flex-start', width: 'max-content',
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Artboard — labeled card
+// ─────────────────────────────────────────────────────────────
+function DCArtboard({ label, children, width, height, style = {} }) {
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      {label && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: 0,
+          paddingBottom: 8,
+          fontSize: 12, fontWeight: 500, color: DC.label,
+          whiteSpace: 'nowrap',
+        }}>{label}</div>
+      )}
+      <div style={{
+        borderRadius: 2,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06)',
+        overflow: 'hidden',
+        width, height,
+        background: '#fff',
+        ...style,
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Post-it — absolute-positioned sticky note
+// ─────────────────────────────────────────────────────────────
+function DCPostIt({ children, top, left, right, bottom, rotate = -2, width = 180 }) {
+  return (
+    <div style={{
+      position: 'absolute', top, left, right, bottom, width,
+      background: DC.postitBg, padding: '14px 16px',
+      fontFamily: '"Comic Sans MS", "Marker Felt", "Segoe Print", cursive',
+      fontSize: 14, lineHeight: 1.4, color: DC.postitText,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
+      transform: `rotate(${rotate}deg)`,
+      zIndex: 5,
+    }}>{children}</div>
+  );
+}
+
+Object.assign(window, { DesignCanvas, DCSection, DCArtboard, DCPostIt });
+
+
+
+</script>
+
+<script type="text/babel" data-presets="env,react">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "view": "canvas",
+  "initialTab": "home",
+  "heroEmphasis": "xl",
+  "accent": "#5EB3FF"
+}/*EDITMODE-END*/;
+
+// ─── Mobile App (interactive) ─────────────────────────────────────
+function MobileApp({ initialTab = 'home', demo }) {
+  const [tab, setTab] = React.useState(demo || initialTab);
+  const [breakdownOpen, setBreakdownOpen] = React.useState(false);
+  const [addOpen, setAddOpen] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const refresh = () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1100);
+  };
+
+  let content;
+  if (tab === 'home')     content = <HomeScreen onOpenBreakdown={() => setBreakdownOpen(true)} onOpenTxn={() => {}} refreshing={refreshing} />;
+  else if (tab === 'txns')     content = <TxnsScreen onOpenTxn={() => {}} />;
+  else if (tab === 'savings')  content = <SavingsScreen />;
+  else if (tab === 'settings') content = <SettingsScreen />;
+
+  return (
+    <PhoneFrame>
+      <div style={{ position: 'absolute', inset: 0, overflow: 'auto', paddingTop: 54 }} onScroll={(e) => {
+        if (e.target.scrollTop < -40 && !refreshing) refresh();
+      }}>
+        {content}
+      </div>
+      <BottomNav tab={tab} onTab={setTab} onAdd={() => setAddOpen(true)} />
+      <BreakdownSheet open={breakdownOpen} onClose={() => setBreakdownOpen(false)} />
+      <AddTxnSheet open={addOpen} onClose={() => setAddOpen(false)} />
+    </PhoneFrame>
+  );
+}
+
+// ─── Canvas view (shows everything side by side) ──────────────────
+function CanvasView() {
+  const [linkState, setLinkState] = React.useState('default');
+  const [onbSlide, setOnbSlide] = React.useState(0);
+  return (
+    <DesignCanvas>
+      {/* Title */}
+      <div style={{ padding: '0 60px 20px', maxWidth: 1200 }}>
+        <div style={{
+          fontFamily: 'Manrope, sans-serif', fontSize: 42, fontWeight: 800,
+          letterSpacing: -1.2, color: '#2a2418',
+        }}>Current — Safe-To-Spend</div>
+        <div style={{ fontFamily: 'Manrope, sans-serif', fontSize: 15, color: 'rgba(60,50,40,0.65)', marginTop: 8, maxWidth: 720, lineHeight: 1.5 }}>
+          Mobile prototype + web layouts for a calm student-first budgeting product. One number that matters,
+          explained on demand. Dark immersive surfaces, blue CTA, gold reserved for savings.
+        </div>
+      </div>
+
+      <DCSection title="01 · Live Mobile Prototype" subtitle="Tap tabs, the + button, the Safe-To-Spend hero, and pull down to refresh.">
+        <DCArtboard label="Interactive">
+          <MobileApp initialTab="home" />
+        </DCArtboard>
+        <DCPostIt top={-20} left={420} rotate={3} width={190}>
+          Tap the big number → Safe-To-Spend breakdown sheet
+        </DCPostIt>
+        <DCPostIt top={360} left={430} rotate={-4} width={190}>
+          Tap + in the nav → Add transaction sheet with smart chips
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection title="02 · Mobile Screens" subtitle="Each frame is live. Swap via tabs.">
+        <DCArtboard label="Home / Default">
+          <MobileApp demo="home" />
+        </DCArtboard>
+        <DCArtboard label="Activity / All">
+          <MobileApp demo="txns" />
+        </DCArtboard>
+        <DCArtboard label="Savings Insights">
+          <MobileApp demo="savings" />
+        </DCArtboard>
+        <DCArtboard label="Settings">
+          <MobileApp demo="settings" />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection title="03 · Safe-To-Spend Breakdown" subtitle="Bottom sheet — every row tappable for explanation.">
+        <DCArtboard label="Breakdown sheet">
+          <PhoneFrame>
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', paddingTop: 54 }}>
+              <HomeScreen onOpenBreakdown={() => {}} onOpenTxn={() => {}} />
+            </div>
+            <BreakdownSheet open={true} onClose={() => {}} />
+          </PhoneFrame>
+        </DCArtboard>
+        <DCArtboard label="Add Transaction">
+          <PhoneFrame>
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', paddingTop: 54 }}>
+              <HomeScreen onOpenBreakdown={() => {}} onOpenTxn={() => {}} />
+            </div>
+            <AddTxnSheet open={true} onClose={() => {}} />
+          </PhoneFrame>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection title="04 · Onboarding" subtitle="Typography-led, illustration-free. 3 slides.">
+        <DCArtboard label="Slide 01">
+          <PhoneFrame>
+            <div style={{ position: 'absolute', inset: 0 }}>
+              <OnboardingScreen slide={0} onNext={() => {}} onSkip={() => {}} />
+            </div>
+          </PhoneFrame>
+        </DCArtboard>
+        <DCArtboard label="Slide 02">
+          <PhoneFrame>
+            <div style={{ position: 'absolute', inset: 0 }}>
+              <OnboardingScreen slide={1} onNext={() => {}} onSkip={() => {}} />
+            </div>
+          </PhoneFrame>
+        </DCArtboard>
+        <DCArtboard label="Slide 03">
+          <PhoneFrame>
+            <div style={{ position: 'absolute', inset: 0 }}>
+              <OnboardingScreen slide={2} onNext={() => {}} onSkip={() => {}} />
+            </div>
+          </PhoneFrame>
+        </DCArtboard>
+        <DCArtboard label="Interactive · click Continue">
+          <InteractiveOnboarding />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection title="05 · Link Bank" subtitle="Default, loading, and error states share the same shell — copy and structure carry the state.">
+        <DCArtboard label="Default">
+          <PhoneFrame>
+            <div style={{ position: 'absolute', inset: 0, paddingTop: 0 }}>
+              <LinkBankScreen state="default" onLink={() => {}} />
+            </div>
+          </PhoneFrame>
+        </DCArtboard>
+        <DCArtboard label="Loading">
+          <PhoneFrame>
+            <div style={{ position: 'absolute', inset: 0 }}>
+              <LinkBankScreen state="loading" />
+            </div>
+          </PhoneFrame>
+        </DCArtboard>
+        <DCArtboard label="Error">
+          <PhoneFrame>
+            <div style={{ position: 'absolute', inset: 0 }}>
+              <LinkBankScreen state="error" onRetry={() => {}} />
+            </div>
+          </PhoneFrame>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection title="06 · Web — Home" subtitle="Same calm composition at 1440 — Safe-To-Spend remains the largest element.">
+        <DCArtboard label="Web / Home / Default" width={1440}>
+          <WebShell tab="home">
+            <WebHome />
+          </WebShell>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection title="07 · Web — Transactions" subtitle="Roomy rows, muted dividers — avoids spreadsheet visuals.">
+        <DCArtboard label="Web / Transactions / Default" width={1440}>
+          <WebShell tab="txns">
+            <WebTxns />
+          </WebShell>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection title="08 · Design System" subtitle="Foundations + components pulled out of the screens.">
+        <DCArtboard label="Tokens" width={640}>
+          <DesignSystem />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+function InteractiveOnboarding() {
+  const [slide, setSlide] = React.useState(0);
+  return (
+    <PhoneFrame>
+      <div style={{ position: 'absolute', inset: 0 }}>
+        <OnboardingScreen
+          slide={slide}
+          onNext={() => setSlide(s => (s + 1) % 3)}
+          onSkip={() => setSlide(2)}
+        />
+      </div>
+    </PhoneFrame>
+  );
+}
+
+// ─── Design System Panel ──────────────────────────────────────────
+function DesignSystem() {
+  const palette = [
+    { n: 'bg-blue-black', v: '#1A1A2E' },
+    { n: 'surface',       v: '#16213E' },
+    { n: 'pop-blue',      v: '#5EB3FF' },
+    { n: 'gold',          v: '#F5C400' },
+    { n: 'green',         v: '#3ecf8e' },
+    { n: 'white',         v: '#FFFFFF' },
+  ];
+  return (
+    <div style={{ background: CURRENT.bgDeep, padding: 32, color: '#fff', minHeight: 900 }}>
+      <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.6, marginBottom: 4 }}>Foundations</div>
+      <div style={{ fontSize: 13, color: CURRENT.textLow, marginBottom: 28 }}>Tokens are the source of truth. No colors outside the approved set.</div>
+
+      <SectionTitle>Colors</SectionTitle>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 28 }}>
+        {palette.map(c => (
+          <div key={c.v} style={{ background: CURRENT.surface, padding: 14, borderRadius: 16 }}>
+            <div style={{ width: '100%', height: 56, background: c.v, borderRadius: 10, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}/>
+            <div style={{ fontSize: 12, fontWeight: 700, marginTop: 10 }}>{c.n}</div>
+            <div style={{ fontSize: 11, color: CURRENT.textLow, fontFamily: 'monospace' }}>{c.v}</div>
+          </div>
+        ))}
+      </div>
+
+      <SectionTitle>Typography · Manrope</SectionTitle>
+      <Card padding={20} style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 48, fontWeight: 800, letterSpacing: -1.5, lineHeight: 1 }}>Safe to Spend</div>
+        <div style={{ fontSize: 12, color: CURRENT.textLow, marginTop: 4 }}>Type / Safe-To-Spend · 88/800</div>
+        <div style={{ height: 1, background: CURRENT.border, margin: '18px 0' }} />
+        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.8 }}>H1 · Settings</div>
+        <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.4, marginTop: 10 }}>H2 · Accounts</div>
+        <div style={{ fontSize: 15, marginTop: 10 }}>Body · $428.50 available today</div>
+        <div style={{ fontSize: 12, color: CURRENT.textLow, marginTop: 8 }}>Caption · Until Mar 28 · 11 days</div>
+      </Card>
+
+      <SectionTitle>Buttons</SectionTitle>
+      <Card padding={20} style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        <Btn size="md">Primary</Btn>
+        <Btn variant="secondary" size="md">Secondary</Btn>
+        <Btn variant="ghost" size="md">Ghost</Btn>
+        <Btn size="md" disabled>Disabled</Btn>
+        <Btn size="md" loading>Loading</Btn>
+      </Card>
+
+      <SectionTitle>Inputs & Toggles</SectionTitle>
+      <Card padding={20} style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: 14, color: CURRENT.textMed, fontSize: 14, flex: 1 }}>Search…</div>
+          <Toggle on={true} onChange={() => {}} />
+          <Toggle on={false} onChange={() => {}} />
+        </div>
+      </Card>
+
+      <SectionTitle>Transaction row</SectionTitle>
+      <Card padding={12} style={{ marginBottom: 24 }}>
+        <TxnRow merchant="Grocery Outlet" category="Groceries" date="Today" amount={-42.18} cat="grocery" />
+        <TxnRow merchant="Payroll Deposit" category="Income" date="Mar 15" amount={1200.00} cat="income" />
+        <TxnRow merchant="Spotify" category="Subscription" date="Mar 12" amount={-10.99} cat="music" flagged />
+      </Card>
+
+      <SectionTitle>Progress (gold = savings)</SectionTitle>
+      <Card padding={20}>
+        <div style={{ fontSize: 12, color: CURRENT.textLow, marginBottom: 8 }}>Emergency Fund</div>
+        <Progress value={1340} max={2000} color={CURRENT.gold} height={10} />
+      </Card>
+    </div>
+  );
+}
+
+// ─── Root view dispatcher ─────────────────────────────────────────
+function App() {
+  const [view, setView] = React.useState(TWEAK_DEFAULTS.view);
+  const [editMode, setEditMode] = React.useState(false);
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setEditMode(true);
+      if (e.data?.type === '__deactivate_edit_mode') setEditMode(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  return (
+    <>
+      <style>{GLOBAL_CSS}</style>
+      {view === 'canvas' && <CanvasView />}
+      {view === 'mobile' && (
+        <div style={{
+          minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: '#0c0d1a', padding: 40,
+        }}>
+          <MobileApp />
+        </div>
+      )}
+      {view === 'web' && (
+        <div style={{ minHeight: '100vh', background: '#0c0d1a', padding: 40, display: 'flex', justifyContent: 'center' }}>
+          <WebApp />
+        </div>
+      )}
+
+      {editMode && <TweaksPanel view={view} setView={setView} />}
+    </>
+  );
+}
+
+function WebApp() {
+  const [tab, setTab] = React.useState('home');
+  return (
+    <WebShell tab={tab} onTab={setTab}>
+      {tab === 'home' ? <WebHome /> : tab === 'txns' ? <WebTxns /> :
+        <div style={{ padding: 80, textAlign: 'center', color: CURRENT.textMed }}>
+          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, color: CURRENT.text }}>Coming soon on web</div>
+          This tab lives on mobile today. Switch to the mobile view to explore it.
+        </div>
+      }
+    </WebShell>
+  );
+}
+
+function TweaksPanel({ view, setView }) {
+  const set = (k, v) => window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [k]: v } }, '*');
+  return (
+    <div style={{
+      position: 'fixed', bottom: 20, right: 20, zIndex: 9999,
+      background: 'rgba(22,33,62,0.95)', backdropFilter: 'blur(20px)',
+      padding: 18, borderRadius: 18, minWidth: 220,
+      boxShadow: '0 10px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08)',
+      fontFamily: FONT, color: '#fff',
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.8, textTransform: 'uppercase', color: CURRENT.blue, marginBottom: 12 }}>Tweaks</div>
+      <div style={{ fontSize: 12, color: CURRENT.textLow, marginBottom: 6 }}>View</div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+        {['canvas','mobile','web'].map(v => (
+          <button key={v} onClick={() => { setView(v); set('view', v); }} style={{
+            flex: 1, padding: '8px 10px', borderRadius: 10, border: 'none', cursor: 'pointer',
+            background: view === v ? CURRENT.blue : 'rgba(255,255,255,0.06)',
+            color: view === v ? CURRENT.bgDeep : '#fff',
+            fontFamily: FONT, fontWeight: 700, fontSize: 12, textTransform: 'capitalize',
+          }}>{v}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

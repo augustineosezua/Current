@@ -11,8 +11,13 @@ const prisma = new PrismaClient({
 }).$extends(withAccelerate());
 
 // returns the authenticated userId or sends 401 and returns null
-async function requireAuth(req: express.Request, res: express.Response): Promise<string | null> {
-  const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+async function requireAuth(
+  req: express.Request,
+  res: express.Response,
+): Promise<string | null> {
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
   const userId = session?.user.id;
   if (!userId) {
     res.status(401).json({ error: "User Must Be Signed In" });
@@ -48,9 +53,10 @@ router.delete("/api/delete-user", async (req, res) => {
 // deletes a bank account and all of its transactions
 router.delete("/api/delete-bank-account", async (req, res) => {
   try {
+    console.log("Received request to delete bank account with body:", req.body);
     const userId = await requireAuth(req, res);
     if (!userId) return;
-    const bankAccountId = req.body.bankAccountId;
+    const bankAccountId = req.body.accountId as string;
 
     if (!bankAccountId) {
       return res.status(400).json({ error: "Bank Account ID is required" });
@@ -59,6 +65,8 @@ router.delete("/api/delete-bank-account", async (req, res) => {
     const bankAccount = await prisma.bankAccounts.findUnique({
       where: { id: bankAccountId },
     });
+
+    console.log("Bank account to delete:", bankAccount);
 
     // ownership check prevents deleting another user's account
     if (!bankAccount || bankAccount.userId !== userId) {

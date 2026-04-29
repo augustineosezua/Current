@@ -1,74 +1,164 @@
 "use client";
 import { useState } from "react";
 import { signUp } from "../lib/auth-client";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { toast } from "sonner";
 
 export default function SignUpPage() {
-  const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const createUser = async () => {
-    await signUp.email(
-      {
-        email,
-        password,
-        name,
-      },
-      {
-        onError: (ctx) => {
-          console.log("Sign up failed: " + ctx.error.message);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await signUp.email(
+        { email, password, name },
+        {
+          onSuccess: () => router.push("/onboarding?step=intro"),
+          onError: (ctx) => toast.error(ctx.error.message),
         },
-      },
-    );
+      );
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="max-w-xs mx-auto mt-24 flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Sign Up</h1>
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          await createUser();
-        }}
-        className="flex flex-col gap-4"
-      >
-        <div className="flex flex-col gap-1">
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="name">Name</label>
-          <input
-            type="text"
-            id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2"
-          />
-        </div>
-        <button
-          type="submit"
-          className="bg-black text-white rounded py-2 cursor-pointer"
+    <div className="flex h-screen w-screen bg-[#080d1a] text-white overflow-hidden">
+      {/* left panel — branding */}
+      <div className="w-[42%] flex flex-col border-r border-white/5">
+        {/* logo */}
+        <div
+          className="flex items-center px-8 pt-1 cursor-pointer"
+          onClick={() => router.push("/")}
         >
-          Sign Up
-        </button>
-      </form>
+          <div className="flex items-center gap-2 py-4">
+            <div className="w-8 h-8 rounded-md bg-[#5EB3FF] flex items-center justify-center font-bold text-[#1A1A2E] text-lg">
+              C
+            </div>
+            <span className="font-semibold text-xl">Current</span>
+          </div>
+        </div>
+
+        {/* tagline */}
+        <div className="flex-1 flex flex-col items-center justify-center px-12 relative">
+          <div className="absolute w-80 h-80 rounded-full bg-[#5EB3FF]/10 blur-[80px] pointer-events-none" />
+          <div className="relative text-center flex flex-col gap-4">
+            <p className="text-[#5EB3FF] text-[10px] font-bold tracking-[0.2em] uppercase">
+              Your balance is about to make sense
+            </p>
+            <h1 className="text-4xl font-bold leading-tight">
+              Know what&apos;s safe to spend, always.
+            </h1>
+            <p className="text-white/40 text-sm leading-relaxed">
+              Make my balance make sense
+            </p>
+          </div>
+        </div>
+
+        {/* footer */}
+        <div className="px-8 py-4 text-xs text-white/25">
+          © Current · Bank-grade encryption · SOC 2 Type II
+        </div>
+      </div>
+
+      {/* right panel — form */}
+      <div className="w-[58%] flex flex-col border-l border-white/5">
+        <div className="flex-1 flex items-center justify-center px-12">
+          <div className="w-full max-w-sm flex flex-col gap-8">
+            {/* heading */}
+            <div className="flex flex-col gap-1">
+              <h2 className="text-2xl font-bold">Create your account</h2>
+              <p className="text-white/40 text-sm">
+                Start knowing what you can actually spend.
+              </p>
+            </div>
+
+            {/* form */}
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="name"
+                  className="text-white/50 text-[10px] font-bold tracking-[0.15em] uppercase"
+                >
+                  Full name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Alex Johnson"
+                  required
+                  className="bg-[#1A1A2E] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="email"
+                  className="text-white/50 text-[10px] font-bold tracking-[0.15em] uppercase"
+                >
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="bg-[#1A1A2E] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="password"
+                  className="text-white/50 text-[10px] font-bold tracking-[0.15em] uppercase"
+                >
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="bg-[#1A1A2E] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="mt-2 px-6 py-3 bg-[#5EB3FF] text-[#1A1A2E] font-bold rounded-full text-sm hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading && (
+                  <div className="w-4 h-4 rounded-full border-2 border-[#1A1A2E]/30 border-t-[#1A1A2E] animate-spin" />
+                )}
+                {loading ? "Creating account…" : "Create account →"}
+              </button>
+            </form>
+
+            {/* switch link */}
+            <p className="text-white/30 text-xs text-center">
+              Already have an account?{" "}
+              <Link href="/login" className="text-[#5EB3FF] hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

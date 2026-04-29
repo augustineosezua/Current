@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +35,27 @@ export default function RootLayout({
       lang="en"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", manrope.variable)}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <Toaster
+          position="bottom-left"
+          toastOptions={{
+            style: {
+              background: "#16213E",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "#ffffff",
+              fontFamily: "var(--font-manrope)",
+              fontSize: "13px",
+              fontWeight: 500,
+              borderRadius: "14px",
+            },
+            classNames: {
+              success: "!text-[#3ecf8e]",
+              error: "!text-white/70",
+            },
+          }}
+        />
+      </body>
     </html>
   );
 }

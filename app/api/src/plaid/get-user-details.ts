@@ -49,6 +49,65 @@ router.post("/api/check-plaid-user", async (req, res) => {
   }
 });
 
+//fetch all the data for the current user to determine onboarding status
+router.get("/api/user-details", async (req, res) => {
+  try {
+    const userId = await requireAuth(req, res);
+    if (!userId) return;
+
+    const plaidUser = await prisma.plaidUser.findFirst({
+      where: {
+        userId: userId,
+      },
+      include: {
+        bankAccounts: true,
+      },
+    });
+
+    const userSettings = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        userSettings: true,
+      },
+    });
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId: userId,
+      },
+    });
+
+    const budgetItems = await prisma.budgetItem.findMany({
+      where: {
+        userId: userId,
+      },
+    });
+
+    const bankAccounts = await prisma.bankAccounts.findMany({
+      where: {
+        userId: userId,
+      },
+    });
+
+    const returnData = {
+      plaidUser,
+      userSettings: userSettings?.userSettings,
+      transactions,
+      budgetItems,
+    };
+
+    return res.json({
+      returnData,
+      status: 200,
+    });
+  } catch (error) {
+    console.error("Error fetching user details:", error);
+    return res.status(500).json({ error: "Error fetching user details" });
+  }
+});
+
 // fetches all bank accounts for the current user
 router.get("/api/accounts", async (req, res) => {
   try {
@@ -173,7 +232,9 @@ router.get("/api/savings-reconciliation", async (req, res) => {
     return res.json({ ...reconciliation, status: 200 });
   } catch (err) {
     console.error("Error calculating savings reconciliation:", err);
-    return res.status(500).json({ error: "Error calculating savings reconciliation" });
+    return res
+      .status(500)
+      .json({ error: "Error calculating savings reconciliation" });
   }
 });
 

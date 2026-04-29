@@ -1,5 +1,5 @@
 import express from "express";
-import { rateLimit } from "express-rate-limit";
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { plaidClient } from "../lib/plaid";
 import { CountryCode, Products } from "plaid";
 import { PrismaClient } from "../generated/prisma/client";
@@ -17,7 +17,7 @@ const prisma = new PrismaClient({
 const linkTokenLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
-  keyGenerator: (req) => (req as any).userId ?? req.ip ?? "unknown",
+  keyGenerator: (req) => (req as any).userId ?? ipKeyGenerator(req.ip ?? ""),
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -26,7 +26,7 @@ const linkTokenLimiter = rateLimit({
 const exchangeLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
-  keyGenerator: (req) => (req as any).userId ?? req.ip ?? "unknown",
+  keyGenerator: (req) => (req as any).userId ?? ipKeyGenerator(req.ip ?? ""),
   standardHeaders: true,
   legacyHeaders: false,
 });

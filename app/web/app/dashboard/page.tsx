@@ -1,5 +1,6 @@
 "use client";
 import { useSession, signOut } from "../lib/auth-client";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaidLink } from "react-plaid-link";
@@ -89,7 +90,7 @@ export default function Dashboard() {
     );
     //TODO: implement better error handling here + notify user
     if (!checkUserResponse.ok) {
-      console.error("Failed to check Plaid user");
+      toast.error("Failed to check Plaid user.");
       return;
     }
     const checkUserData = await checkUserResponse.json();
@@ -110,7 +111,7 @@ export default function Dashboard() {
         },
       );
       if (!response.ok) {
-        console.error("Failed to create link token");
+        toast.error("Failed to create link token.");
         return;
       }
       const data = await response.json();
@@ -129,7 +130,7 @@ export default function Dashboard() {
         `http://localhost:3001/api/transactions${transcationParams}`,
       );
       if (!response.ok) {
-        console.error("Failed to fetch transactions");
+        toast.error("Failed to fetch transactions.");
       }
       const transactions = await response.json();
       console.log("Transactions:", transactions);
@@ -140,14 +141,14 @@ export default function Dashboard() {
         `http://localhost:3001/api/accounts${accountParams}`,
       );
       if (!accountsResponse.ok) {
-        console.error("Failed to fetch accounts");
+        toast.error("Failed to fetch accounts.");
       }
       const accounts = await accountsResponse.json();
       console.log("Accounts:", accounts);
       setAccounts(accounts.bankAccounts);
       setAccountLoadingState("loaded");
     } catch (error) {
-      console.error("Error fetching data:", error);
+      toast.error("Something went wrong while loading your data.");
       setAccountLoadingState("error");
     }
   };
