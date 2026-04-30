@@ -65,6 +65,11 @@ export const calculateSafeToSpend = async (userId: any) => {
     acceptedBudgetItems: [] as any[],
     pendingBudgetItemUpdates: [] as any[],
     error: null as Error | null,
+    // breakdown for the "how it's calculated" popup
+    checkingBalance: 0,
+    billsTotal: 0,
+    scheduledSavings: 0,
+    spendingFloor: 0,
   };
 
   // sum of non-savings, non-credit checking balances
@@ -80,6 +85,8 @@ export const calculateSafeToSpend = async (userId: any) => {
       },
     },
   });
+
+  returnValues.checkingBalance = availableBalance._sum.availableBalance?.toNumber() ?? 0;
 
   // no linked accounts found — can't calculate
   if (
@@ -110,14 +117,19 @@ export const calculateSafeToSpend = async (userId: any) => {
     where: { userId: userId },
   });
 
-  // sum unpaid bills due this month
+  // look 7 days ahead so a bill due just after month-end isn't invisible today
+  const sevenDaysOut = new Date(now);
+  sevenDaysOut.setDate(sevenDaysOut.getDate() + 7);
+  const billsCutoff = sevenDaysOut > endOfMonth ? sevenDaysOut : endOfMonth;
+
+  // sum unpaid bills due this month (or within the next 7 days if near month-end)
   let billsTotal = 0;
   const billsFetcher = await prisma.bills.aggregate({
     _sum: { amount: true },
     where: {
       isPaid: false,
       userId: userId,
-      dueDate: { lte: endOfMonth },
+      dueDate: { lte: billsCutoff },
     },
   });
 
@@ -127,6 +139,7 @@ export const calculateSafeToSpend = async (userId: any) => {
   } else {
     billsTotal = billsFetcher._sum.amount.toNumber();
   }
+  returnValues.billsTotal = billsTotal;
 
   // active budget goals, highest priority and soonest due first
   const budgetItems = await prisma.budgetItem.findMany({
@@ -168,6 +181,7 @@ export const calculateSafeToSpend = async (userId: any) => {
       0,
     );
   }
+  returnValues.spendingFloor = remainingDesiredMonthlySpend;
 
   // build list of items that need a contribution this month and their per-month amounts
   let budgetItemsTotal = 0;
@@ -225,6 +239,8 @@ export const calculateSafeToSpend = async (userId: any) => {
         budgetItemsTotal,
       0,
     );
+    returnValues.scheduledSavings = budgetItemsTotal;
+    returnValues.spendingFloor = 0;
     returnValues.ignoredBudgetItems = [];
     returnValues.acceptedBudgetItems = budgetItemsToUpdate;
     returnValues.pendingBudgetItemUpdates = budgetItemsToUpdate;
@@ -412,6 +428,12 @@ export const calculateSafeToSpend = async (userId: any) => {
     returnValues.acceptedBudgetItems = updatedBudgetItems;
     returnValues.pendingBudgetItemUpdates = updatedBudgetItems;
     returnValues.safeToSpend = newSafeToSpend;
+    returnValues.scheduledSavings = updatedBudgetItems.reduce((sum: number, item: any) => {
+      const contribution = item.isReccuring
+        ? item.amount.toNumber()
+        : item.newAmountSaved.toNumber() - item.amountSaved.toNumber();
+      return sum + contribution;
+    }, 0);
     if (newSafeToSpend === 0) {
       await availableAfterCalculation();
       return returnValues;

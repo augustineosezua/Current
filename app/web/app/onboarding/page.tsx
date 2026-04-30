@@ -7,10 +7,12 @@ import LinkPage from "./pages/link";
 import { IntroContent } from "./pages/intro";
 import Accounts from "./pages/accounts";
 import SetupPage from "./pages/setup";
+import LoadingScreen from "../components/loading-screen";
 
 export default function Onboarding() {
   const API = "http://localhost:3001/api";
   const [pageIsLoading, setPageIsLoading] = useState(true);
+  const [authResolved, setAuthResolved] = useState(false);
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const pathname = usePathname();
@@ -24,8 +26,13 @@ export default function Onboarding() {
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [plaidUser, setPlaidUser] = useState(null);
 
-  // handles going to next step
   useEffect(() => {
+    if (!isPending) setAuthResolved(true);
+  }, [isPending]);
+
+  // handles going to next step — gated so URL never changes during auth/loading
+  useEffect(() => {
+    if (!authResolved || pageIsLoading) return;
     console.log("Current onboarding step:", onboardingStep);
 
     switch (onboardingStep) {
@@ -75,7 +82,7 @@ export default function Onboarding() {
         }
         break;
     }
-  }, [onboardingStep]);
+  }, [onboardingStep, authResolved, pageIsLoading]);
 
   const findCurrentStatus = async (userId: string) => {
     // first check for plaidUser
@@ -93,54 +100,45 @@ export default function Onboarding() {
     }
     const userDetailsData = await userDetails.json();
     const plaidUser = userDetailsData.returnData.plaidUser;
+    const userSettings = userDetailsData.returnData.userSettings;
     setPlaidUser(userDetailsData.returnData);
 
+    // no plaid connection at all → intro
     if (!plaidUser) {
       setOnboardingStep("intro");
       setPageIsLoading(false);
       return;
     }
 
-    // check for bankAccounts on PlaidUser
-    //check that for some bank account at least one is a savings account (for categorization purposes)
-    if (
-      plaidUser.bankAccounts.length > 0 &&
-      !plaidUser.bankAccounts.some(
-        (account: any) => account.isSavingsAccount === true,
-      )
-    ) {
+    // plaid connected but no bank accounts imported yet → connect
+    if (!plaidUser.bankAccounts?.length) {
+      setOnboardingStep("connect");
+      setPageIsLoading(false);
+      return;
+    }
+
+    // accounts exist but none categorized as savings → accounts
+    if (!plaidUser.bankAccounts.some((a: any) => a.isSavingsAccount === true)) {
       setOnboardingStep("accounts");
       setPageIsLoading(false);
       return;
-    } // check for account categorization on bankAccounts
-    else if (
-      plaidUser.bankAccounts.length > 0 &&
-      plaidUser.bankAccounts.some(
-        (account: any) => account.isSavingsAccount === true,
-      )
-    ) {
+    }
+
+    // savings categorized but setup not done → setup
+    if (!userSettings?.nextPaychequeDate) {
       setCategorizationCompleted(true);
       setOnboardingStep("setup");
       setPageIsLoading(false);
       return;
     }
-    // if user settings don't exist, setup isnt completed setOnboarding("setup")
-    else if (
-      !userDetailsData.returnData.userSettings ||
-      !userDetailsData.returnData.userSettings.nextPaycheckDate
-    ) {
-      setOnboardingStep("setup");
-      setPageIsLoading(false);
-      return;
-    }
 
-    // check for userSettings and nextPaycheckDate on plaidUser
+    // onboarding fully complete — send to dashboard
+    router.push("/dashboard");
   };
 
   //wait for user authentication
   useEffect(() => {
     if (!isPending && !session) {
-      setPageIsLoading(false);
       router.push("/login");
     } else {
       if (session?.user.id) {
@@ -150,6 +148,10 @@ export default function Onboarding() {
       }
     }
   }, [session, isPending]);
+
+  // useEffect never runs on the server, so authResolved stays false during SSR
+  // preventing any flash before the client knows the session state
+  if (!authResolved || pageIsLoading) return <LoadingScreen />;
 
   if (onboardingStep === "intro") {
     return (

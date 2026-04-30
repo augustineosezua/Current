@@ -139,7 +139,7 @@ router.post("/api/update-budget-item", async (req, res) => {
     const userId = await requireAuth(req, res);
     if (!userId) return;
 
-    const { budgetItemId, name, amount, dueDate, amountSaved, isCompleted, isDeleted, priority, isReccuring, frequency } = req.body;
+    const { budgetItemId, name, amount, dueDate, amountSaved, isCompleted, isDeleted, priority, isReccuring, frequency, isMonthlySavingGoal } = req.body;
 
     if (!budgetItemId || typeof budgetItemId !== "string") {
       return res.status(400).json({ error: "budgetItemId is required" });
@@ -172,6 +172,7 @@ router.post("/api/update-budget-item", async (req, res) => {
         priority,
         isReccuring,
         frequency,
+        isMonthlySavingGoal,
         updatedAt: new Date(),
       },
     });

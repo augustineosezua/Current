@@ -54,7 +54,6 @@ router.get("/api/user-details", async (req, res) => {
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
-
     const plaidUser = await prisma.plaidUser.findFirst({
       where: {
         userId: userId,
@@ -96,6 +95,7 @@ router.get("/api/user-details", async (req, res) => {
       userSettings: userSettings?.userSettings,
       transactions,
       budgetItems,
+      bankAccounts,
     };
 
     return res.json({
@@ -207,7 +207,6 @@ router.get("/api/safe-to-spend", async (req, res) => {
     if (!userId) return;
 
     const safeToSpend = await calculateSafeToSpend(userId);
-
     // domain error (e.g. no linked accounts) rather than an uncaught exception
     if (safeToSpend.error) {
       console.error("Safe-to-spend calculation error:", safeToSpend.error);

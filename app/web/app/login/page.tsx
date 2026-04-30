@@ -1,15 +1,29 @@
 "use client";
-import { useState } from "react";
-import { signIn } from "../lib/auth-client";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "../lib/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import LoadingScreen from "../components/loading-screen";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { data: session, isPending } = useSession();
+  const [authResolved, setAuthResolved] = useState(false);
+
+  useEffect(() => {
+    if (!isPending) setAuthResolved(true);
+  }, [isPending]);
+
+  useEffect(() => {
+    if (authResolved && session) router.push("/dashboard");
+  }, [authResolved, session]);
+
+  if (!authResolved) return <LoadingScreen />;
+  if (session) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

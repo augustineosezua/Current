@@ -231,6 +231,7 @@ export default function SetupPage() {
                 budgetItemId: createData.data.id,
                 isReccuring: true,
                 frequency: "monthly",
+                isMonthlySavingGoal: true,
               }),
             });
           }

@@ -27,7 +27,7 @@ async function requireAuth(
 }
 
 // marks the user as pending deletion — hard delete is scheduled 30 days out
-router.delete("/api/delete-user", async (req, res) => {
+router.delete("/api/delete/user", async (req, res) => {
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
@@ -51,7 +51,7 @@ router.delete("/api/delete-user", async (req, res) => {
 });
 
 // deletes a bank account and all of its transactions
-router.delete("/api/delete-bank-account", async (req, res) => {
+router.delete("/api/delete/bank-account", async (req, res) => {
   try {
     console.log("Received request to delete bank account with body:", req.body);
     const userId = await requireAuth(req, res);
@@ -91,7 +91,7 @@ router.delete("/api/delete-bank-account", async (req, res) => {
 });
 
 // deletes a single transaction
-router.delete("/api/delete-transaction", async (req, res) => {
+router.delete("/api/delete/transaction", async (req, res) => {
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
@@ -121,7 +121,7 @@ router.delete("/api/delete-transaction", async (req, res) => {
 });
 
 // deletes a bill
-router.delete("/api/delete-bill", async (req, res) => {
+router.delete("/api/delete/bill", async (req, res) => {
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
@@ -151,7 +151,7 @@ router.delete("/api/delete-bill", async (req, res) => {
 });
 
 // deletes a budget goal
-router.delete("/api/delete-budget-item", async (req, res) => {
+router.delete("/api/delete/budget-item", async (req, res) => {
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
