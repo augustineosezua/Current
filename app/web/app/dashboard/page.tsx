@@ -43,7 +43,6 @@ import {
   Ticket,
   TrainFront,
   Utensils,
-  User,
   Wifi,
   Wine,
   Wrench,
@@ -51,6 +50,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import AppHeader from "../components/app-header";
 import InfoPopup from "./helpers/info-popup";
 import ErrorDashboard from "./error-dashboard";
 import LoadingScreen from "../components/loading-screen";
@@ -617,54 +617,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* sticky header */}
-      <header className="sticky top-0 z-40 h-18 px-10 flex items-center gap-10 border-b border-white/6 bg-[#111125]/90 backdrop-blur-md">
-        <div className="flex items-center gap-2.5 font-extrabold text-[18px] tracking-[-0.3px]">
-          <div className="w-7 h-7 rounded-lg bg-[#5EB3FF] flex items-center justify-center font-black text-[#1A1A2E] text-[16px]">
-            C
-          </div>
-          Current
-        </div>
-
-        {/* nav */}
-        <nav className="flex gap-1 flex-1">
-          <span className="px-4 py-2 rounded-full bg-[#5EB3FF]/12 text-[#5EB3FF] font-semibold text-sm cursor-default">
-            Home
-          </span>
-          <Link
-            href="/transactions"
-            className="px-4 py-2 rounded-full text-white/50 font-semibold text-sm hover:text-white/80 transition-colors"
-          >
-            Transactions
-          </Link>
-          <Link
-            href="/bills"
-            className="px-4 py-2 rounded-full text-white/50 font-semibold text-sm hover:text-white/80 transition-colors"
-          >
-            Bills
-          </Link>
-          <button className="px-4 py-2 rounded-full text-white/50 font-semibold text-sm hover:text-white/80 transition-colors">
-            Savings
-          </button>
-          <button className="px-4 py-2 rounded-full text-white/50 font-semibold text-sm hover:text-white/80 transition-colors">
-            Settings
-          </button>
-        </nav>
-
-        {/* user pill */}
-        <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-white/4 rounded-full cursor-default select-none">
-          <div className="w-6 h-6 rounded-full bg-linear-to-br from-[#5EB3FF] to-[#16213E] flex items-center justify-center text-[11px] font-bold">
-            {firstName ? (
-              firstName.charAt(0).toUpperCase()
-            ) : (
-              <User className="h-3.5 w-3.5" />
-            )}
-          </div>
-          {firstName && (
-            <span className="text-[13px] font-semibold">{firstName}</span>
-          )}
-        </div>
-      </header>
+      <AppHeader activePage="home" />
 
       {/* page content */}
       <main className="px-10 py-9 mx-auto w-full max-w-7xl">
@@ -692,7 +645,11 @@ export default function Dashboard() {
               <div className="h-27.5 bg-white/4 rounded-2xl animate-pulse mb-7" />
             ) : (
               <div
-                className="text-[#5EB3FF] font-extrabold leading-[0.95] tabular-nums"
+                className={`font-extrabold leading-[0.95] tabular-nums ${
+                  saveToSpend.safeToSpend > 0
+                    ? "text-[#5EB3FF]"
+                    : "text-[#F97316]"
+                }`}
                 style={{
                   fontSize: "clamp(72px, 9vw, 140px)",
                   letterSpacing: "-0.04em",
@@ -986,7 +943,7 @@ export default function Dashboard() {
                         <p
                           className={`text-[15px] font-bold tabular-nums shrink-0 ${isIncome ? "text-[#3ecf8e]" : "text-white"}`}
                         >
-                          {isIncome ? "+" : "−"}${displayAmt.toFixed(2)}
+                          {isIncome ? "+" : "−"}${displayAmt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                     );
@@ -1038,7 +995,7 @@ export default function Dashboard() {
                         key={bill.id}
                         className={`flex items-center gap-3 px-3 py-3.5 ${i < upcomingBills.length - 1 || upcomingBills.length < 3 ? "border-b border-white/6" : ""}`}
                       >
-                        <div className={`w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0 ${overdue ? "bg-red-500/10 text-red-400" : "bg-[#5EB3FF]/10 text-[#5EB3FF]"}`}>
+                        <div className={`w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0 ${overdue ? "bg-[#F97316]/10 text-[#F97316]" : "bg-[#5EB3FF]/10 text-[#5EB3FF]"}`}>
                           <BillIcon className="h-4.5 w-4.5" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1047,19 +1004,19 @@ export default function Dashboard() {
                               {toTitleCase(bill.billName)}
                             </p>
                             {overdue && (
-                              <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-red-500/12 text-red-400 text-[10px] font-bold tracking-wide uppercase">
+                              <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-[#F97316]/12 text-[#F97316] text-[10px] font-bold tracking-wide uppercase">
                                 Overdue
                               </span>
                             )}
                           </div>
-                          <p className={`text-[11px] mt-0.5 ${overdue ? "text-red-400/60" : "text-white/40"}`}>
+                          <p className={`text-[11px] mt-0.5 ${overdue ? "text-[#F97316]/60" : "text-white/40"}`}>
                             {overdue
                               ? `Due ${shortDate(bill.dueDate)} · ${Math.abs(days)}d ago`
                               : `${shortDate(bill.dueDate)}${days <= 31 ? ` · ${days}d` : ""}`}
                           </p>
                         </div>
-                        <p className={`text-[14px] font-bold tabular-nums shrink-0 ${overdue ? "text-red-400" : "text-white/60"}`}>
-                          ${(Number(bill.amount) || 0).toFixed(2)}
+                        <p className={`text-[14px] font-bold tabular-nums shrink-0 ${overdue ? "text-[#F97316]" : "text-white/60"}`}>
+                          ${(Number(bill.amount) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                     );

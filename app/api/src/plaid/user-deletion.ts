@@ -180,5 +180,26 @@ router.delete("/api/delete/budget-item", async (req, res) => {
   }
 });
 
-//delete transactions
+// cancels a pending deletion request and restores the account to active status
+router.post("/api/reactivate/user", async (req, res) => {
+  try {
+    const userId = await requireAuth(req, res);
+    if (!userId) return;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: UserStatus.active,
+        deletion_requested_at: null,
+        deletion_scheduled_for: null,
+      },
+    });
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Error reactivating user:", error);
+    return res.status(500).json({ error: "Error reactivating user" });
+  }
+});
+
 export default router;

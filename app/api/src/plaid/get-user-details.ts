@@ -63,12 +63,13 @@ router.get("/api/user-details", async (req, res) => {
       },
     });
 
-    const userSettings = await prisma.user.findUnique({
+    const userWithSettings = await prisma.user.findUnique({
       where: {
         id: userId,
       },
       select: {
         userSettings: true,
+        status: true,
       },
     });
 
@@ -92,7 +93,8 @@ router.get("/api/user-details", async (req, res) => {
 
     const returnData = {
       plaidUser,
-      userSettings: userSettings?.userSettings,
+      userSettings: userWithSettings?.userSettings,
+      userStatus: userWithSettings?.status ?? "active",
       transactions,
       budgetItems,
       bankAccounts,
@@ -127,39 +129,52 @@ router.get("/api/accounts", async (req, res) => {
   }
 });
 
-// fetches all transactions for the current user
+// fetches transactions for the current user with optional pagination
 router.get("/api/transactions", async (req, res) => {
   try {
     const userId = await requireAuth(req, res);
-    // requireAuth already sends 401 — return without a second response
     if (!userId) return;
 
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        userId: userId,
-      },
-    });
+    const skip = Math.max(0, parseInt(req.query.skip as string) || 0);
+    const take = Math.min(100, Math.max(1, parseInt(req.query.take as string) || 25));
 
-    return res.json({ transactions: transactions, status: 200 });
+    const [transactions, total] = await Promise.all([
+      prisma.transaction.findMany({
+        where: { userId },
+        skip,
+        take,
+        orderBy: { date: "desc" },
+      }),
+      prisma.transaction.count({ where: { userId } }),
+    ]);
+
+    return res.json({ transactions, total, status: 200 });
   } catch (error) {
     console.error("Error fetching transactions:", error);
     return res.status(500).json({ error: "Error fetching transactions" });
   }
 });
 
-// fetches all bills for the current user, paid and unpaid
+// fetches bills for the current user with optional pagination
 router.get("/api/bills-all", async (req, res) => {
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
 
-    const bills = await prisma.bills.findMany({
-      where: {
-        userId: userId,
-      },
-    });
+    const skip = Math.max(0, parseInt(req.query.skip as string) || 0);
+    const take = Math.min(100, Math.max(1, parseInt(req.query.take as string) || 30));
 
-    return res.json({ bills: bills, status: 200 });
+    const [bills, total] = await Promise.all([
+      prisma.bills.findMany({
+        where: { userId },
+        skip,
+        take,
+        orderBy: { dueDate: "asc" },
+      }),
+      prisma.bills.count({ where: { userId } }),
+    ]);
+
+    return res.json({ bills, total, status: 200 });
   } catch (error) {
     console.error("Error fetching bills:", error);
     return res.status(500).json({ error: "Error fetching bills" });

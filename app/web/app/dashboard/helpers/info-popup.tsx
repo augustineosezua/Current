@@ -37,7 +37,7 @@ function Row({
 }
 
 export default function InfoPopup({ props, breakdown }: InfoPopupProps) {
-  // whatever the STS didn't account for with bills + savings is the actual buffer deducted
+  // whatever the STS didn't account for with bills + savings is the actual minimum desired spend - already spent
   const impliedBuffer = Math.round(
     (breakdown.checkingBalance - breakdown.billsTotal - breakdown.scheduledSavings - breakdown.safeToSpend)
     * 100

@@ -20,7 +20,8 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
     "pg": "^8.20.0",
-    "plaid": "^41.4.0"
+    "plaid": "^41.4.0",
+    "resend": "^6.12.2"
   },
   "scripts": {
     "dev": "tsx watch src/server.ts"

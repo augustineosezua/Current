@@ -1,4 +1,4 @@
-//endpoints to create Current-specific user data
+// endpoints to create and mutate Current-specific user data (goals, bills, reorder, allocate)
 import express from "express";
 import { PrismaClient } from "../generated/prisma/client";
 import { withAccelerate } from "@prisma/extension-accelerate";
@@ -10,7 +10,7 @@ const prisma = new PrismaClient({
   accelerateUrl: process.env.DATABASE_URL!,
 }).$extends(withAccelerate());
 
-// returns the authenticated userId or sends 401 and returns null
+// resolves the current session and returns the userId, or halts the request with 401
 async function requireAuth(
   req: express.Request,
   res: express.Response,
@@ -19,6 +19,7 @@ async function requireAuth(
     headers: fromNodeHeaders(req.headers),
   });
   const userId = session?.user.id;
+  // no valid session — reject before any DB work
   if (!userId) {
     res.status(401).json({ error: "User Must Be Signed In" });
     return null;
@@ -26,18 +27,20 @@ async function requireAuth(
   return userId;
 }
 
-// one_time is only valid for non-recurring bills
+// valid frequencies for recurring bills — one_time is intentionally excluded
 const RECURRING_FREQUENCIES = ["daily", "weekly", "biweekly", "semimonthly", "monthly", "yearly"];
 
-// returns a parsed Date or null if the value isn't a valid date string
+// coerces an unknown value to a Date, returning null for anything unparseable
 function parseDate(value: unknown): Date | null {
   if (!value) return null;
   const d = new Date(value as string);
+  // NaN dates would silently corrupt any date arithmetic downstream
   return isNaN(d.getTime()) ? null : d;
 }
 
 //DEPRECATED FOR NOW
 router.post("/api/create-budget-period", async (req, res) => {
+  // creates a 30-day budget snapshot — superseded by rolling STS calculations
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
@@ -47,7 +50,7 @@ router.post("/api/create-budget-period", async (req, res) => {
         id: crypto.randomUUID(),
         userId: userId,
         startDate: new Date(),
-        endDate: new Date(new Date().setDate(new Date().getDate() + 30)), // Set end date to 30 days from now
+        endDate: new Date(new Date().setDate(new Date().getDate() + 30)),
         totalIncome: req.body.totalIncome,
         totalSaved: req.body.totalSaved,
         totalSpent: req.body.totalSpent,
@@ -59,6 +62,7 @@ router.post("/api/create-budget-period", async (req, res) => {
       data: newBudgetPeriod,
     });
   } catch (error) {
+    // log internally, never expose stack traces to the client
     console.error("Error creating budget period:", error);
     return res.status(500).json({ error: "Error creating budget period" });
   }
@@ -66,6 +70,7 @@ router.post("/api/create-budget-period", async (req, res) => {
 
 // DEPRECATED FOR NOW
 router.post("/api/update-budget-period", async (req, res) => {
+  // patches an existing budget snapshot — superseded by rolling STS calculations
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
@@ -92,23 +97,24 @@ router.post("/api/update-budget-period", async (req, res) => {
   }
 });
 
-// creates a new savings or budget goal
+// creates a new savings or budget goal for the authenticated user
 router.post("/api/create-budget-item", async (req, res) => {
+  // validate input before writing — bad data here breaks the STS allocator
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
 
     const { name, amount, dueDate } = req.body;
 
-    // name must be a non-empty string
+    // reject blank names before touching the DB
     if (!name || typeof name !== "string" || !name.trim()) {
       return res.status(400).json({ error: "name must be a non-empty string" });
     }
-    // negative amounts break the safe-to-spend allocator math
+    // negative or zero amounts corrupt the STS percentage math
     if (typeof amount !== "number" || amount <= 0) {
       return res.status(400).json({ error: "amount must be a positive number" });
     }
-    // NaN dates break safe-to-spend date arithmetic
+    // unparseable dates would silently produce NaN in STS date arithmetic
     const parsedDueDate = parseDate(dueDate);
     if (!parsedDueDate) {
       return res.status(400).json({ error: "dueDate must be a valid date" });
@@ -133,8 +139,9 @@ router.post("/api/create-budget-item", async (req, res) => {
   }
 });
 
-// updates an existing budget goal — all fields are optional
+// applies a partial update to an existing goal — only fields present in the body are changed
 router.post("/api/update-budget-item", async (req, res) => {
+  // used for priority changes, marking isDeleted (spent), toggling isMonthlySavingGoal, etc.
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
@@ -148,7 +155,7 @@ router.post("/api/update-budget-item", async (req, res) => {
       return res.status(400).json({ error: "amount must be a positive number" });
     }
 
-    // validate dueDate only if provided
+    // only parse and validate dueDate when it was actually sent in this request
     let parsedDueDate: Date | undefined;
     if (dueDate !== undefined) {
       const d = parseDate(dueDate);
@@ -156,7 +163,7 @@ router.post("/api/update-budget-item", async (req, res) => {
       parsedDueDate = d;
     }
 
-    // userId in where clause prevents modifying another user's item (IDOR)
+    // scoping by userId in the where clause prevents one user from modifying another's goals (IDOR)
     const updatedBudgetItem = await prisma.budgetItem.update({
       where: {
         id: budgetItemId,
@@ -187,8 +194,9 @@ router.post("/api/update-budget-item", async (req, res) => {
   }
 });
 
-// creates a new bill
+// creates a new bill and attaches it to the user's account
 router.post("/api/bills", async (req, res) => {
+  // bills feed directly into STS as deductions — amounts and dates must be clean
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
@@ -205,7 +213,7 @@ router.post("/api/bills", async (req, res) => {
     if (!parsedDueDate) {
       return res.status(400).json({ error: "dueDate must be a valid date" });
     }
-    // frequency is required when the bill repeats — one_time is not a valid recurring frequency
+    // recurring bills without a frequency would break the next-occurrence spawner
     if (isReccuring && (!frequency || !RECURRING_FREQUENCIES.includes(frequency))) {
       return res.status(400).json({
         error: `frequency must be one of: ${RECURRING_FREQUENCIES.join(", ")} when isReccuring is true`,
@@ -234,8 +242,9 @@ router.post("/api/bills", async (req, res) => {
   }
 });
 
-// partially updates an existing bill — only provided fields are changed
+// applies a partial update to a bill; when marked paid, auto-spawns the next recurring occurrence
 router.patch("/api/bills/:billId", async (req, res) => {
+  // the paid→next-occurrence spawn is the key side-effect that keeps recurring bills rolling
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
@@ -246,7 +255,7 @@ router.patch("/api/bills/:billId", async (req, res) => {
       return res.status(400).json({ error: "amount must be a positive number" });
     }
 
-    // validate frequency against the recurring set — one_time cannot be set on any bill via PATCH
+    // one_time cannot be set as a frequency — recurring must use the approved set
     if (frequency !== undefined && !RECURRING_FREQUENCIES.includes(frequency)) {
       return res.status(400).json({
         error: `frequency must be one of: ${RECURRING_FREQUENCIES.join(", ")}`,
@@ -261,21 +270,22 @@ router.patch("/api/bills/:billId", async (req, res) => {
       return res.status(404).json({ error: "Bill not found" });
     }
 
-    // ownership check — users may only modify their own bills
+    // ownership check — prevents modifying another user's bill (IDOR)
     if (existingBill.userId !== userId) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    // if the result of this patch would be a recurring bill with no valid frequency, reject it
+    // resolve effective values by merging patch fields with the existing record
     const effectiveIsRecurring = isRecurring !== undefined ? isRecurring : existingBill.isReccuring;
     const effectiveFrequency = frequency !== undefined ? frequency : existingBill.frequency;
+    // refuse to leave a recurring bill without a valid frequency
     if (effectiveIsRecurring && (!effectiveFrequency || !RECURRING_FREQUENCIES.includes(effectiveFrequency))) {
       return res.status(400).json({
         error: `A recurring bill must have a frequency of one of: ${RECURRING_FREQUENCIES.join(", ")}`,
       });
     }
 
-    // validate dueDate only if provided
+    // only parse dueDate when it was sent — undefined means "don't change it"
     let parsedDueDate: Date | undefined;
     if (dueDate !== undefined) {
       const d = parseDate(dueDate);
@@ -283,6 +293,7 @@ router.patch("/api/bills/:billId", async (req, res) => {
       parsedDueDate = d;
     }
 
+    // build the update payload from only the fields that were provided
     const updateData: Record<string, unknown> = {};
     if (billName !== undefined) updateData.billName = billName;
     if (amount !== undefined) updateData.amount = amount;
@@ -296,11 +307,13 @@ router.patch("/api/bills/:billId", async (req, res) => {
       data: updateData,
     });
 
-    // only spawn the next occurrence when transitioning from unpaid → paid
+    // only spawn the next occurrence on the unpaid → paid transition, not on re-patches
     const becomingPaid = isPaid === true && existingBill.isPaid === false;
 
+    // advance the due date by one billing cycle and create the next unpaid instance
     if (becomingPaid && effectiveIsRecurring && effectiveFrequency) {
       const nextDueDate = new Date(bill.dueDate);
+      // each case advances nextDueDate by exactly one period
       switch (effectiveFrequency) {
         case "daily":
           nextDueDate.setDate(nextDueDate.getDate() + 1);
@@ -312,7 +325,7 @@ router.patch("/api/bills/:billId", async (req, res) => {
           nextDueDate.setDate(nextDueDate.getDate() + 14);
           break;
         case "semimonthly":
-          // alternates between the 1st and 15th of each month
+          // alternates between the 1st and 15th — before the 15th lands on 15th, after lands on 1st next month
           if (nextDueDate.getDate() < 15) {
             nextDueDate.setDate(15);
           } else {
@@ -328,6 +341,7 @@ router.patch("/api/bills/:billId", async (req, res) => {
           break;
       }
 
+      // persist the auto-generated next occurrence so it appears on the bills page immediately
       await prisma.bills.create({
         data: {
           id: crypto.randomUUID(),
@@ -346,6 +360,103 @@ router.patch("/api/bills/:billId", async (req, res) => {
   } catch (error) {
     console.error("Error updating bill:", error);
     return res.status(500).json({ error: "Error updating bill" });
+  }
+});
+
+// reassigns integer priority values so the drag-drop order survives page reloads
+// orderedIds[0] = highest priority (priority = length), last index = priority 1
+router.post("/api/budget-items/reorder", async (req, res) => {
+  // priorities drive the order in STS calculations and the savings reconciliation waterfall
+  try {
+    const userId = await requireAuth(req, res);
+    if (!userId) return;
+
+    const { orderedIds } = req.body;
+
+    // reject malformed payloads before any DB work
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return res.status(400).json({ error: "orderedIds must be a non-empty array" });
+    }
+    // every entry must be a non-empty string to be a valid Prisma id
+    if (orderedIds.some((id) => typeof id !== "string" || !id.trim())) {
+      return res.status(400).json({ error: "all entries in orderedIds must be non-empty strings" });
+    }
+
+    // confirm all submitted ids belong to this user — prevents partial-ownership reorders (IDOR)
+    const existing = await prisma.budgetItem.findMany({
+      where: { userId, id: { in: orderedIds } },
+      select: { id: true },
+    });
+    if (existing.length !== orderedIds.length) {
+      return res.status(403).json({ error: "One or more budget items not found or not owned by user" });
+    }
+
+    // single DB transaction so no goal is temporarily left with a stale priority mid-update
+    await prisma.$transaction(
+      orderedIds.map((id, index) =>
+        prisma.budgetItem.update({
+          where: { id, userId },
+          // index 0 gets the highest number = highest priority
+          data: { priority: orderedIds.length - index },
+        }),
+      ),
+    );
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Error reordering budget items:", error);
+    return res.status(500).json({ error: "Error reordering budget items" });
+  }
+});
+
+// records that funds have been moved toward a goal, capping at target and auto-completing when full
+router.post("/api/budget-items/allocate", async (req, res) => {
+  // amountSaved drives the reconciliation gap and the progress bar on the savings page
+  try {
+    const userId = await requireAuth(req, res);
+    if (!userId) return;
+
+    const { budgetItemId, amount } = req.body;
+
+    if (!budgetItemId || typeof budgetItemId !== "string") {
+      return res.status(400).json({ error: "budgetItemId is required" });
+    }
+    // allocating zero or negative would silently corrupt progress tracking
+    if (typeof amount !== "number" || amount <= 0) {
+      return res.status(400).json({ error: "amount must be a positive number" });
+    }
+
+    // scoped by userId so a user can't allocate to someone else's goal
+    const item = await prisma.budgetItem.findUnique({
+      where: { id: budgetItemId, userId },
+    });
+
+    // goal not found or belongs to a different user
+    if (!item) {
+      return res.status(404).json({ error: "Budget item not found" });
+    }
+
+    const currentSaved = item.amountSaved.toNumber();
+    const target = item.amount.toNumber();
+    // cap at target so amountSaved never exceeds amount
+    const newAmountSaved = Math.min(currentSaved + amount, target);
+    // flip isCompleted automatically when the goal is fully funded
+    const isNowComplete = newAmountSaved >= target;
+
+    // persist the new saved total and completion state in one write
+    const updated = await prisma.budgetItem.update({
+      where: { id: budgetItemId, userId },
+      data: {
+        amountSaved: newAmountSaved,
+        isCompleted: isNowComplete,
+        updatedAt: new Date(),
+      },
+    });
+
+    return res.json({ message: "Funds allocated successfully", data: updated });
+  } catch (error) {
+    console.error("Error allocating funds:", error);
+    return res.status(500).json({ error: "Error allocating funds" });
   }
 });
 
