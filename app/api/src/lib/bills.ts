@@ -1,9 +1,4 @@
-import { PrismaClient } from "../generated/prisma/client";
-import { withAccelerate } from "@prisma/extension-accelerate";
-
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL!,
-}).$extends(withAccelerate());
+import { prisma } from "./prisma";
 
 // returns suggested bill-transaction pairs based on fuzzy name and amount match
 export const billsMatcher = async (userId: string) => {

@@ -1,15 +1,21 @@
 "use client";
 import { useState, useEffect } from "react";
-import { signUp, useSession } from "../lib/auth-client";
+import { authClient, useSession } from "../lib/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import LoadingScreen from "../components/loading-screen";
 
+const onboardingCallbackURL =
+  typeof window === "undefined"
+    ? "/onboarding?step=intro"
+    : `${window.location.origin}/onboarding?step=intro`;
+
 export default function SignUpPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { data: session, isPending } = useSession();
@@ -28,15 +34,27 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await signUp.email(
-        { email, password, name },
-        {
-          onSuccess: () => router.push("/onboarding?step=intro"),
-          onError: (ctx) => toast.error(ctx.error.message),
-        },
-      );
+      const { error } = await authClient.signUp.email({
+        name,
+        email,
+        password,
+        callbackURL: onboardingCallbackURL,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -149,6 +167,33 @@ export default function SignUpPage() {
                   required
                   className="bg-[#1A1A2E] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
                 />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="confirm-password"
+                  className="text-white/50 text-[10px] font-bold tracking-[0.15em] uppercase"
+                >
+                  Confirm password
+                </label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className={`bg-[#1A1A2E] border rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none transition-colors ${
+                    confirmPassword && password !== confirmPassword
+                      ? "border-[#F97316]/60 focus:border-[#F97316]/70"
+                      : "border-white/10 focus:border-[#5EB3FF]/50"
+                  }`}
+                />
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-[#F97316] text-xs font-semibold">
+                    Passwords do not match.
+                  </p>
+                )}
               </div>
 
               <button

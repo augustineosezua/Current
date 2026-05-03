@@ -1,9 +1,4 @@
-import { PrismaClient } from "../generated/prisma/client";
-import { withAccelerate } from "@prisma/extension-accelerate";
-
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL!,
-}).$extends(withAccelerate());
+import { prisma } from "./prisma";
 
 // compares what's actually in savings accounts against what goals collectively claim is saved
 export const calculateSavingsReconciliation = async (userId: string) => {

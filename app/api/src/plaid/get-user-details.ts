@@ -1,16 +1,12 @@
 import express from "express";
-import { PrismaClient } from "../generated/prisma/client";
-import { withAccelerate } from "@prisma/extension-accelerate";
 import { calculateSafeToSpend } from "../lib/safe-to-spend";
 import { calculateSavingsReconciliation } from "../lib/savings";
 import { billsMatcher } from "../lib/bills";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "../lib/auth";
+import { prisma } from "../lib/prisma";
 
 const router = express.Router();
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL!,
-}).$extends(withAccelerate());
 
 // returns the authenticated userId or sends 401 and returns null
 async function requireAuth(

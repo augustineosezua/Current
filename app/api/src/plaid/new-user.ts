@@ -2,16 +2,12 @@ import express from "express";
 import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { plaidClient } from "../lib/plaid";
 import { CountryCode, Products } from "plaid";
-import { PrismaClient } from "../generated/prisma/client";
-import { withAccelerate } from "@prisma/extension-accelerate";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "../lib/auth";
 import { encrypt, decrypt } from "../lib/crypto";
+import { prisma } from "../lib/prisma";
 
 const router = express.Router();
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL!,
-}).$extends(withAccelerate());
 
 // 10 link-token requests per user per hour
 const linkTokenLimiter = rateLimit({

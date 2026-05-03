@@ -1,22 +1,34 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { PrismaClient } from "../generated/prisma/client";
-import { withAccelerate } from "@prisma/extension-accelerate";
-import { sendEmail } from "./email";
-
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL!,
-}).$extends(withAccelerate());
+import {
+  sendPasswordResetEmail,
+  passwordResetNotificationEmail,
+  emailVerificationEmail,
+} from "./email";
+import { prisma } from "./prisma";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  emailAndPassword:{
+  emailAndPassword: {
     enabled: true,
-    //need password reset
+    requireEmailVerification: true,
+    sendResetPassword: async ({ user, url, token }, request) => {
+      await sendPasswordResetEmail(user.email, url);
+    },
+    onPasswordReset: async ({ user }, request) => {
+      await passwordResetNotificationEmail(user.email);
+    },
   },
-  
+  emailVerification: {
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    sendVerificationEmail: async ({ user, url, token }, request) => {
+      await emailVerificationEmail(user.email, url);
+    },
+  },
+
   baseURL: process.env.BASE_URL ?? "http://localhost:3001",
   trustedOrigins: [process.env.CORS_ORIGIN ?? "http://localhost:3000"],
 });

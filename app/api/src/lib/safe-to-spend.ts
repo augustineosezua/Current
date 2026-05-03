@@ -1,5 +1,4 @@
-import { PrismaClient } from "../generated/prisma/client";
-import { withAccelerate } from "@prisma/extension-accelerate";
+import { prisma } from "./prisma";
 
 // All Plaid primary categories that count as spending.
 // Excluded: INCOME, TRANSFER_IN, TRANSFER_OUT, LOAN_DISBURSEMENTS — not outflows.
@@ -18,10 +17,6 @@ const SPENDING_CATEGORIES = [
   "TRANSPORTATION",
   "TRAVEL",
 ];
-
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL!,
-}).$extends(withAccelerate());
 
 // persist updated amountSaved for each budget item
 const updateBudgetItems = async (items: any[]) => {

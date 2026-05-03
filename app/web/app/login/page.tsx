@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { signIn, useSession } from "../lib/auth-client";
+import { authClient, signIn, useSession } from "../lib/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const router = useRouter();
   const { data: session, isPending } = useSession();
   const [authResolved, setAuthResolved] = useState(false);
@@ -29,18 +30,59 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const data = await signIn.email({
-        email,
-        password,
-        callbackURL: "http://localhost:3000/dashboard",
-      });
-      if (data?.error) {
-        toast.error("Invalid email or password.");
-      }
+      await signIn.email(
+        {
+          email,
+          password,
+          callbackURL: "/dashboard",
+        },
+        {
+          onError: async (ctx) => {
+            if (ctx.error.status === 403) {
+              await authClient.sendVerificationEmail({
+                email,
+                callbackURL: "/dashboard",
+              });
+              toast.error(
+                "Please verify your email before signing in. We sent you a new verification link.",
+              );
+              return;
+            }
+
+            toast.error(ctx.error.message || "Invalid email or password.");
+          },
+        },
+      );
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error("Enter your email first, then request a reset link.");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const result = await authClient.requestPasswordReset({
+        email,
+        redirectTo: "/reset-password",
+      });
+
+      if (result?.error) {
+        toast.error(result.error.message || "Could not send reset link.");
+        return;
+      }
+
+      toast.success("Password reset link sent. Check your email.");
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -116,12 +158,22 @@ export default function LoginPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="password"
-                  className="text-white/50 text-[10px] font-bold tracking-[0.15em] uppercase"
-                >
-                  Password
-                </label>
+                <div className="flex items-center justify-between gap-4">
+                  <label
+                    htmlFor="password"
+                    className="text-white/50 text-[10px] font-bold tracking-[0.15em] uppercase"
+                  >
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={resetLoading}
+                    className="text-[11px] font-bold text-[#5EB3FF] hover:text-[#5EB3FF]/80 disabled:opacity-50 transition-colors"
+                  >
+                    {resetLoading ? "Sending..." : "Forgot password?"}
+                  </button>
+                </div>
                 <input
                   id="password"
                   type="password"

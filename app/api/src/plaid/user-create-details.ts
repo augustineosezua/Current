@@ -1,14 +1,10 @@
 // endpoints to create and mutate Current-specific user data (goals, bills, reorder, allocate)
 import express from "express";
-import { PrismaClient } from "../generated/prisma/client";
-import { withAccelerate } from "@prisma/extension-accelerate";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "../lib/auth";
+import { prisma } from "../lib/prisma";
 
 const router = express.Router();
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL!,
-}).$extends(withAccelerate());
 
 // resolves the current session and returns the userId, or halts the request with 401
 async function requireAuth(

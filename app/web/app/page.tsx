@@ -146,8 +146,8 @@ export default function Home() {
         className={`relative overflow-hidden flex min-h-screen items-center pt-16 ${fade(heroVisible, 'delay-150')}`}
       >
         {/* ambient blue glow */}
-        <div className="pointer-events-none absolute -top-32 right-0 h-[700px] w-[700px] rounded-full bg-[#4B9FFF]/6 blur-[140px]" />
-        <div className="pointer-events-none absolute bottom-0 left-1/4 h-[400px] w-[400px] rounded-full bg-[#4B9FFF]/4 blur-[100px]" />
+        <div className="pointer-events-none absolute -top-32 right-0 h-175 w-175 rounded-full bg-[#4B9FFF]/6 blur-[140px]" />
+        <div className="pointer-events-none absolute bottom-0 left-1/4 h-175 w-175 rounded-full bg-[#4B9FFF]/4 blur-[100px]" />
         <div className="mx-auto w-full max-w-280 px-6 py-24 md:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 

@@ -1,14 +1,11 @@
 //endpoints to delete users and user data from Current
 import express from "express";
-import { PrismaClient, UserStatus } from "../generated/prisma/client";
-import { withAccelerate } from "@prisma/extension-accelerate";
+import { UserStatus } from "../generated/prisma/client";
 import { auth } from "../lib/auth";
 import { fromNodeHeaders } from "better-auth/node";
+import { prisma } from "../lib/prisma";
 
 const router = express.Router();
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL!,
-}).$extends(withAccelerate());
 
 // returns the authenticated userId or sends 401 and returns null
 async function requireAuth(

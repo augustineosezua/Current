@@ -5,7 +5,7 @@ import { usePlaidLink } from "react-plaid-link";
 import { useRouter } from "next/navigation";
 
 interface LinkProps {
-  setLinkToken: (token: string) => void;
+  setLinkToken: (token: string | null) => void;
   linkToken: string | null;
   setOnboardingStep: (step: string) => void;
   session: any;
@@ -19,11 +19,19 @@ const steps = ["Welcome", "Bank", "Accounts", "Setup", "Done"];
 function PlaidOpener({
   token,
   onSuccess,
+  onExit,
 }: {
   token: string;
   onSuccess: (publicToken: string) => void;
+  onExit: (errorMessage: string | null) => void;
 }) {
-  const { open, ready } = usePlaidLink({ token, onSuccess });
+  const { open, ready } = usePlaidLink({
+    token,
+    onSuccess,
+    onExit: (error) => {
+      onExit(error?.display_message || error?.error_message || null);
+    },
+  });
   useEffect(() => {
     if (ready) open();
   }, [ready, open]);
@@ -41,6 +49,7 @@ export default function LinkPage({
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [isPlaidUser, setIsPlaidUser] = useState(false);
   const [plaidUserLoading, setPlaidUserLoading] = useState(true);
+  const [plaidError, setPlaidError] = useState<string | null>(null);
 
   const checkIsUser = async () => {
     const userDetails = await fetch(`${API}/user-details`, {
@@ -57,7 +66,8 @@ export default function LinkPage({
     }
     const userDetailsData = await userDetails.json();
     const plaidUserData = userDetailsData.returnData;
-    if (!plaidUserData) {
+    if (!plaidUserData?.plaidUser) {
+      setPlaidUser(null);
       setIsPlaidUser(false);
       setPlaidUserLoading(false);
       return false;
@@ -70,13 +80,15 @@ export default function LinkPage({
   };
 
   const createLinkToken = async () => {
+    setPlaidError(null);
+    setPageIsLoading(true);
     const response = await fetch(`${API}/create-link-token`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
     });
     if (!response.ok) {
-      toast.error("Failed to create link token.");
+      setPlaidError("We couldn't prepare the secure bank connection. Please try again.");
       setPageIsLoading(false);
       return;
     }
@@ -96,18 +108,38 @@ export default function LinkPage({
   }, [plaidUserLoading, isPlaidUser]);
 
   const handleSuccess = async (publicToken: string) => {
-    await fetch(`${API}/exchange-public-token`, {
+    const response = await fetch(`${API}/exchange-public-token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ publicToken }),
     });
+
+    if (!response.ok) {
+      setLinkToken(null);
+      setPlaidError("We couldn't connect your bank. Please try again.");
+      setPageIsLoading(false);
+      return;
+    }
+
     setOnboardingStep("accounts");
+  };
+
+  const handlePlaidExit = async (errorMessage: string | null) => {
+    setLinkToken(null);
+    setPlaidError(errorMessage || "Bank connection was cancelled.");
+    setPageIsLoading(false);
   };
 
   return (
     <div className="flex h-screen w-screen bg-[#080d1a] text-white overflow-hidden">
-      {linkToken && <PlaidOpener token={linkToken} onSuccess={handleSuccess} />}
+      {linkToken && (
+        <PlaidOpener
+          token={linkToken}
+          onSuccess={handleSuccess}
+          onExit={handlePlaidExit}
+        />
+      )}
 
       {/* left panel */}
       <div className="w-[42%] flex flex-col border-r border-white/5">
@@ -176,7 +208,29 @@ export default function LinkPage({
         </div>
 
         {/* loading state — visible until Plaid Link takes over */}
-        {pageIsLoading ? (
+        {plaidError ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-12">
+            <div className="w-full max-w-sm flex flex-col items-center text-center gap-5">
+              <div className="w-11 h-11 rounded-2xl bg-[#F97316]/12 border border-[#F97316]/25 flex items-center justify-center text-[#F97316] text-xl font-bold">
+                !
+              </div>
+              <div className="flex flex-col gap-2">
+                <h1 className="text-2xl font-bold tracking-[-0.3px]">
+                  Bank connection failed
+                </h1>
+                <p className="text-white/45 text-sm leading-relaxed">
+                  {plaidError}
+                </p>
+              </div>
+              <button
+                onClick={createLinkToken}
+                className="px-6 py-3 bg-[#5EB3FF] text-[#1A1A2E] font-bold rounded-full text-sm hover:brightness-110 transition-all"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        ) : pageIsLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <div className="w-5 h-5 rounded-full border-2 border-[#5EB3FF]/25 border-t-[#5EB3FF] animate-spin" />
             <p className="text-white/35 text-sm">

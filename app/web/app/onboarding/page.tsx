@@ -101,14 +101,16 @@ export default function Onboarding() {
     const userDetailsData = await userDetails.json();
     const plaidUser = userDetailsData.returnData.plaidUser;
     const userSettings = userDetailsData.returnData.userSettings;
-    setPlaidUser(userDetailsData.returnData);
 
     // no plaid connection at all → intro
     if (!plaidUser) {
+      setPlaidUser(null);
       setOnboardingStep("intro");
       setPageIsLoading(false);
       return;
     }
+
+    setPlaidUser(userDetailsData.returnData);
 
     // plaid connected but no bank accounts imported yet → connect
     if (!plaidUser.bankAccounts?.length) {
