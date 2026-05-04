@@ -3,13 +3,13 @@
     "@types/cors": "^2.8.19",
     "@types/express-session": "^1.18.2",
     "@types/pg": "^8.20.0",
-    "nodemon": "^3.1.14",
-    "prisma": "^7.5.0"
+    "nodemon": "^3.1.14"
   },
   "type": "module",
   "dependencies": {
     "better-auth": "^1.5.5",
     "express-session": "^1.19.0",
+    "prisma": "^7.5.0",
     "@better-auth/prisma-adapter": "^1.5.5",
     "tsx": "^4.19.3",
     "@prisma/adapter-pg": "^7.5.0",
@@ -24,6 +24,7 @@
     "resend": "^6.12.2"
   },
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts"
   }
