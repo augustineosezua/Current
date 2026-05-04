@@ -15,7 +15,7 @@ import userUpdateDetails from "./plaid/user-update-details";
 import { prisma } from "./lib/prisma";
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT ?? 3001;
 
 // restrict to trusted frontend origin
 const corsOptions: cors.CorsOptions = {
