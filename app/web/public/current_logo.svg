@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 172 32" fill="none" role="img">
+  <title>Current</title>
+  <desc>Current app logo — blue rounded square with dark C mark and Manrope wordmark.</desc>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@600;700&amp;display=swap');
+    .c-mark { font-family: 'Manrope', -apple-system, sans-serif; font-weight: 700; font-size: 18px; fill: #1A1A2E; }
+    .wordmark { font-family: 'Manrope', -apple-system, sans-serif; font-weight: 600; font-size: 20px; fill: #FFFFFF; }
+  </style>
+
+  <!-- Icon: w-8 h-8 rounded-md bg-[#5EB3FF] -->
+  <rect width="32" height="32" rx="6" fill="#5EB3FF"/>
+
+  <!-- C: font-bold text-lg text-[#1A1A2E] -->
+  <text x="16" y="23" text-anchor="middle" class="c-mark">C</text>
+
+  <!-- Wordmark: font-semibold text-xl text-white -->
+  <text x="40" y="23" class="wordmark">Current</text>
+</svg>

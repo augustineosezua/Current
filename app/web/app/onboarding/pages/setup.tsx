@@ -64,7 +64,7 @@ function fmtGoalDate(iso: string) {
 }
 
 export default function SetupPage() {
-  const API = "http://localhost:3001/api";
+  const API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api`;
   const router = useRouter();
   const [subStep, setSubStep] = useState(0);
   const [saving, setSaving] = useState(false);

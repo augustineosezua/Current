@@ -57,7 +57,7 @@ interface Reconciliation {
   underfundedGoals: { id: string; name: string; shortfall: number; amountCovered?: number }[];
 }
 
-const API = "http://localhost:3001/api";
+const API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api`;
 
 // formats a number as a locale-aware dollar string with a configurable decimal count
 function fmtMoney(n: string | number, decimals = 0): string {
@@ -628,9 +628,7 @@ export default function Savings() {
       const newIndex = prev.findIndex((g) => g.id === over.id);
       const reordered = arrayMove(prev, oldIndex, newIndex);
 
-      // TODO: call POST /api/budget-items/reorder once confirmed stable
       const orderedIds = reordered.map((g) => g.id);
-      console.warn("reorder endpoint not yet implemented", orderedIds);
 
       // fire-and-forget — if the request fails the priorities drift until next reload
       fetch(`${API}/budget-items/reorder`, {

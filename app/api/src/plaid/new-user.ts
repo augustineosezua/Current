@@ -196,7 +196,7 @@ function buildTransactionData(transaction: any) {
 }
 
 // pages through Plaid's transaction sync cursor and writes added, modified, and removed transactions to the DB
-async function setPlaidTransactions(accessToken: string, userId: string, itemId: string) {
+export async function setPlaidTransactions(accessToken: string, userId: string, itemId: string) {
   const plaidUser = await prisma.plaidUser.findUnique({
     where: { plaidItemId: itemId },
   });

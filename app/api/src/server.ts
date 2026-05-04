@@ -6,11 +6,13 @@ import cors from "cors";
 import { rateLimit } from "express-rate-limit";
 
 import plaidRouter from "./plaid/new-user";
+import plaidWebhookRouter from "./plaid/webhook";
 import getUserDetailsRouter from "./plaid/get-user-details";
 import userCreateDetailsRouter from "./plaid/user-create-details";
 import userDeletionRouter from "./plaid/user-deletion";
 import userSettingsRouter from "./plaid/user-settings";
 import userUpdateDetails from "./plaid/user-update-details";
+import { prisma } from "./lib/prisma";
 
 const app = express();
 const port = 3001;
@@ -46,6 +48,11 @@ function sanitizeBody(obj: unknown): unknown {
 }
 
 app.use(cors(corsOptions));
+
+// webhook router must precede express.json() — it uses express.raw() per-route
+// so the raw body bytes are available for Plaid signature verification
+app.use(plaidWebhookRouter);
+
 app.use(express.json());
 
 // sets security headers on every response
@@ -68,6 +75,16 @@ app.use((req, _res, next) => {
 
 app.use(limiter);
 
+// unauthenticated — used by load balancers and uptime monitors
+app.get("/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return res.json({ status: "ok", uptime: Math.floor(process.uptime()), timestamp: new Date().toISOString() });
+  } catch {
+    return res.status(503).json({ status: "error", timestamp: new Date().toISOString() });
+  }
+});
+
 app.all("/api/auth{/*authPath}", toNodeHandler(auth));
 
 app.use(plaidRouter);
@@ -76,6 +93,12 @@ app.use(userCreateDetailsRouter);
 app.use(userDeletionRouter);
 app.use(userSettingsRouter);
 app.use(userUpdateDetails);
+
+// catches any error thrown inside a route handler that wasn't caught locally
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal server error" });
+});
 
 app.listen(port, () => {
   console.log(`listening on port ${port}`);

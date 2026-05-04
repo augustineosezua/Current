@@ -3,7 +3,10 @@
     "allow": [
       "WebFetch(domain:plaid.com)",
       "mcp__ide__getDiagnostics",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\augustine\\\\Desktop\\\\projects\\\\fintech\\\\Current\" -Recurse -Depth 2)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Format-List)"
     ]
   }
 }

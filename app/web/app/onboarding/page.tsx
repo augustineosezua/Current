@@ -10,7 +10,7 @@ import SetupPage from "./pages/setup";
 import LoadingScreen from "../components/loading-screen";
 
 export default function Onboarding() {
-  const API = "http://localhost:3001/api";
+  const API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api`;
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [authResolved, setAuthResolved] = useState(false);
   const { data: session, isPending } = useSession();

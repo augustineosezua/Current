@@ -1,5 +1,5 @@
 "use client";
-import { useSession, signOut } from "../lib/auth-client";
+import { authClient, useSession, signOut } from "../lib/auth-client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -8,7 +8,7 @@ import AppHeader from "../components/app-header";
 import { Plus, Trash2, X, Pencil } from "lucide-react";
 import LoadingScreen from "../components/loading-screen";
 
-const API = "http://localhost:3001/api";
+const API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api`;
 
 interface Account {
   id: string;
@@ -100,6 +100,12 @@ export default function SettingsPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [deleteConfirmIncomeId, setDeleteConfirmIncomeId] = useState<string | null>(null);
   const [deletingIncomeId, setDeletingIncomeId] = useState<string | null>(null);
+
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
 
   useEffect(() => {
     if (!isPending) setAuthResolved(true);
@@ -411,8 +417,52 @@ export default function SettingsPage() {
   }
 
   async function handleCancelDeletion() {
-    // TODO: wire up POST /api/reactivate/user when backend is confirmed ready
-    toast.info("This feature isn't available yet.");
+    try {
+      const res = await fetch(`${API}/reactivate/user`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error();
+      setUserStatus("active");
+      toast.success("Account deletion cancelled.");
+    } catch {
+      toast.error("Failed to cancel deletion. Please try again.");
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!pwCurrent || !pwNew || !pwConfirm) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+    if (pwNew !== pwConfirm) {
+      toast.error("New passwords do not match.");
+      return;
+    }
+    if (pwNew.length < 8) {
+      toast.error("New password must be at least 8 characters.");
+      return;
+    }
+    setPwSaving(true);
+    try {
+      const result = await authClient.changePassword({
+        currentPassword: pwCurrent,
+        newPassword: pwNew,
+        revokeOtherSessions: true,
+      });
+      if (result.error) {
+        toast.error(result.error.message ?? "Failed to change password.");
+        return;
+      }
+      toast.success("Password updated successfully.");
+      setPwOpen(false);
+      setPwCurrent(""); setPwNew(""); setPwConfirm("");
+    } catch {
+      toast.error("Failed to change password.");
+    } finally {
+      setPwSaving(false);
+    }
   }
 
   if (!authResolved) return <LoadingScreen />;
@@ -514,7 +564,7 @@ export default function SettingsPage() {
                             >
                               <span
                                 className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${
-                                  toggleStates[acc.id] ? "translate-x-[18px]" : "translate-x-[2px]"
+                                  toggleStates[acc.id] ? "translate-x-4.5" : "translate-x-4.5"
                                 }`}
                               />
                             </button>
@@ -995,19 +1045,59 @@ export default function SettingsPage() {
                 {/* divider */}
                 <div className="border-t border-white/6" />
 
-                {/* change password stub */}
+                {/* change password */}
                 <div>
                   <p className="text-[15px] font-bold mb-1">Change password</p>
-                  <p className="text-[13px] text-white/40 mb-4">
-                    {/* TODO: wire up Better Auth password reset once it's implemented in auth.ts */}
-                    Coming soon.
-                  </p>
-                  <button
-                    disabled
-                    className="px-4 py-2.5 rounded-xl bg-white/4 text-white/25 text-[13px] font-semibold cursor-not-allowed"
-                  >
-                    Change password
-                  </button>
+                  {pwOpen ? (
+                    <div className="mt-4 flex flex-col gap-3 max-w-sm">
+                      <input
+                        type="password"
+                        placeholder="Current password"
+                        value={pwCurrent}
+                        onChange={(e) => setPwCurrent(e.target.value)}
+                        className="bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-sm font-semibold text-white placeholder-white/25 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
+                      />
+                      <input
+                        type="password"
+                        placeholder="New password"
+                        value={pwNew}
+                        onChange={(e) => setPwNew(e.target.value)}
+                        className="bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-sm font-semibold text-white placeholder-white/25 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
+                      />
+                      <input
+                        type="password"
+                        placeholder="Confirm new password"
+                        value={pwConfirm}
+                        onChange={(e) => setPwConfirm(e.target.value)}
+                        className="bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-sm font-semibold text-white placeholder-white/25 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
+                      />
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => { setPwOpen(false); setPwCurrent(""); setPwNew(""); setPwConfirm(""); }}
+                          className="px-4 py-2 rounded-xl text-[13px] font-semibold text-white/60 hover:text-white transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleChangePassword}
+                          disabled={pwSaving}
+                          className="px-5 py-2.5 rounded-xl bg-[#5EB3FF] text-[#111125] text-sm font-bold hover:bg-[#4da8f5] transition-colors disabled:opacity-50"
+                        >
+                          {pwSaving ? "Saving…" : "Update password"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-3">
+                      <p className="text-[13px] text-white/40 mb-4">Update your account password.</p>
+                      <button
+                        onClick={() => setPwOpen(true)}
+                        className="px-4 py-2.5 rounded-xl bg-white/6 text-white text-[13px] font-semibold hover:bg-white/10 transition-colors"
+                      >
+                        Change password
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
