@@ -29,6 +29,18 @@ export const auth = betterAuth({
     },
   },
 
+  advanced:{
+    cookiePrefix: "better-auth",
+    cookies:{
+      session_token:{
+        attributes:{
+          sameSite: "none",
+          secure: true,
+        }
+      }
+    }
+  },
+
   baseURL:
     process.env.BETTER_AUTH_URL ??
     process.env.BASE_URL ??

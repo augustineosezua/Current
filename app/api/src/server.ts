@@ -80,6 +80,7 @@ app.use((req, _res, next) => {
 //trust first proxy that is google cloud run
 app.set("trust proxy", 1);
 
+app.disable('x-powered-by');
 app.use(limiter);
 
 // unauthenticated — used by load balancers and uptime monitors
@@ -128,3 +129,4 @@ app.use(
 app.listen(port, () => {
   console.log(`listening on port ${port}`);
 });
+
