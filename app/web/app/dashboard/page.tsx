@@ -474,10 +474,7 @@ export default function Dashboard() {
   }, [session, isPending]);
 
   if (!authResolved) return <LoadingScreen />;
-  if (!session) {
-    router.push("/login");
-    return null;
-  }
+  if (!session) return null;
 
   async function getUserData() {
     if (!session) {
