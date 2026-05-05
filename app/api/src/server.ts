@@ -98,6 +98,11 @@ app.get("/health", async (_req, res) => {
   }
 });
 
+//proxy test
+app.get('/ip', (request, response) => {
+	response.send(request.ip);
+});
+
 app.all("/api/auth{/*authPath}", toNodeHandler(auth));
 
 app.use(plaidRouter);
