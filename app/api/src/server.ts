@@ -41,7 +41,8 @@ function sanitizeBody(obj: unknown): unknown {
   if (Array.isArray(obj)) return obj.map(sanitizeBody);
   const safe: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-    if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
+    if (key === "__proto__" || key === "constructor" || key === "prototype")
+      continue;
     safe[key] = sanitizeBody(value);
   }
   return safe;
@@ -61,7 +62,10 @@ app.use((_req, res, next) => {
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-XSS-Protection", "1; mode=block");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=()",
+  );
   next();
 });
 
@@ -73,15 +77,24 @@ app.use((req, _res, next) => {
   next();
 });
 
+//trust first proxy that is google cloud run
+app.set("trust proxy", 1);
+
 app.use(limiter);
 
 // unauthenticated — used by load balancers and uptime monitors
 app.get("/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return res.json({ status: "ok", uptime: Math.floor(process.uptime()), timestamp: new Date().toISOString() });
+    return res.json({
+      status: "ok",
+      uptime: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    });
   } catch {
-    return res.status(503).json({ status: "error", timestamp: new Date().toISOString() });
+    return res
+      .status(503)
+      .json({ status: "error", timestamp: new Date().toISOString() });
   }
 });
 
@@ -95,10 +108,17 @@ app.use(userSettingsRouter);
 app.use(userUpdateDetails);
 
 // catches any error thrown inside a route handler that wasn't caught locally
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error("Unhandled error:", err);
-  res.status(500).json({ error: "Internal server error" });
-});
+app.use(
+  (
+    err: Error,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    console.error("Unhandled error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  },
+);
 
 app.listen(port, () => {
   console.log(`listening on port ${port}`);
