@@ -23,6 +23,7 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendOnSignUp: true,
+    sendOnSignIn: true,
     sendVerificationEmail: async ({ user, url, token }, request) => {
       await emailVerificationEmail(user.email, url);
     },
@@ -30,12 +31,12 @@ export const auth = betterAuth({
 
   advanced:{
     cookiePrefix: "better-auth",
-    useSecureCookies: false,
+    useSecureCookies: true,
     cookies:{
       session_token:{
         attributes:{
           sameSite: "none",
-          secure: false,
+          secure: true,
         }
       }
     }
