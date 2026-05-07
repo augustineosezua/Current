@@ -14,6 +14,7 @@ import {
   Trash2,
   Wallet,
   X,
+  CircleDollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import AppHeader from "../components/app-header";
@@ -57,9 +58,17 @@ interface Reconciliation {
   underfundedGoals: { id: string; name: string; shortfall: number; amountCovered?: number }[];
 }
 
-const API = "/api";
+interface StsData {
+  safeToSpend: number;
+  scheduledSavings: number;
+  checkingBalance: number;
+  billsTotal: number;
+}
 
-// formats a number as a locale-aware dollar string with a configurable decimal count
+const API = "/api";
+const STS_ID = "__sts__";
+const STS_ABOVE_SENTINEL = 1000;
+
 function fmtMoney(n: string | number, decimals = 0): string {
   return Number(n).toLocaleString("en-US", {
     minimumFractionDigits: decimals,
@@ -67,10 +76,8 @@ function fmtMoney(n: string | number, decimals = 0): string {
   });
 }
 
-// converts an ISO date string to a human-readable "Mon YYYY" label for goal due dates
 function goalDate(iso: string): string {
   if (!iso) return "";
-  // guard against invalid dates that could throw or render "Invalid Date"
   try {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "";
@@ -80,9 +87,7 @@ function goalDate(iso: string): string {
   }
 }
 
-// calculates how many whole months remain until a due date, floored at 1 to avoid division by zero
 function monthsUntil(iso: string): number {
-  // +1 because the due month itself is a valid contribution month
   try {
     const now = new Date();
     const due = new Date(iso);
@@ -93,20 +98,27 @@ function monthsUntil(iso: string): number {
         1,
     );
   } catch {
-    // unparseable date — return 1 so division elsewhere stays defined
     return 1;
   }
 }
 
-// derives how much the user needs to set aside this month to stay on track for a goal
 function monthlyContribution(item: BudgetItem): number {
   const amount = Number(item.amount) || 0;
   const saved = Number(item.amountSaved) || 0;
-  // recurring and monthly goals use their full amount as the flat monthly target
   if (item.isMonthlySavingGoal || item.isReccuring) return amount;
-  // one-time goals divide the remaining balance over the months left
   const months = monthsUntil(item.dueDate);
   return (amount - saved) / months;
+}
+
+function dateIsPast(iso: string): boolean {
+  if (!iso) return false;
+  try {
+    const d = new Date(iso);
+    d.setHours(23, 59, 59, 999);
+    return d < new Date();
+  } catch {
+    return false;
+  }
 }
 
 // ── Sortable goal card ──────────────────────────────────────────────────────
@@ -116,12 +128,9 @@ interface GoalCardProps {
   rank: number;
   onDelete: (id: string) => void;
   onAllocate: (item: BudgetItem) => void;
-  isDragging?: boolean;
 }
 
-// active goal card — draggable, shows progress bar and monthly contribution, used in the DnD list
 function GoalCard({ item, rank, onDelete, onAllocate }: GoalCardProps) {
-  // dnd-kit wires up drag state, ref, and ARIA attributes for this specific item
   const {
     attributes,
     listeners,
@@ -151,7 +160,6 @@ function GoalCard({ item, rank, onDelete, onAllocate }: GoalCardProps) {
       className="bg-[#16213E] rounded-[28px] p-6 shadow-[inset_0_0_0_1px_rgba(245,196,0,0.10)] bg-[radial-gradient(ellipse_at_top_left,rgba(245,196,0,0.06),transparent_60%)]"
     >
       <div className="flex items-start gap-4">
-        {/* drag handle */}
         <button
           {...attributes}
           {...listeners}
@@ -162,7 +170,6 @@ function GoalCard({ item, rank, onDelete, onAllocate }: GoalCardProps) {
         </button>
 
         <div className="flex-1 min-w-0">
-          {/* header row */}
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
@@ -193,7 +200,6 @@ function GoalCard({ item, rank, onDelete, onAllocate }: GoalCardProps) {
             </div>
           </div>
 
-          {/* progress */}
           {isComplete ? (
             <div className="flex items-center gap-2 py-2 px-3 rounded-xl bg-[#3ecf8e]/8 border border-[#3ecf8e]/15 mb-4">
               <CheckCircle2 className="h-4 w-4 text-[#3ecf8e] shrink-0" />
@@ -221,7 +227,6 @@ function GoalCard({ item, rank, onDelete, onAllocate }: GoalCardProps) {
             </>
           )}
 
-          {/* meta row */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-4 text-[12px] text-white/40">
               {item.dueDate && (
@@ -258,6 +263,49 @@ function GoalCard({ item, rank, onDelete, onAllocate }: GoalCardProps) {
   );
 }
 
+// ── Draggable STS separator ─────────────────────────────────────────────────
+
+function StsCard({ safeToSpend }: { safeToSpend: number }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: STS_ID });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.75 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="py-1">
+      <div className="flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="text-[#5EB3FF]/30 hover:text-[#5EB3FF]/60 cursor-grab active:cursor-grabbing touch-none shrink-0 transition-colors"
+          aria-label="Drag to reposition safe to spend"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <div className="flex-1 flex items-center gap-3">
+          <div className="flex-1 h-px bg-[#5EB3FF]/15" />
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#5EB3FF]/8 border border-[#5EB3FF]/18">
+            <CircleDollarSign className="h-3.5 w-3.5 text-[#5EB3FF]/60 shrink-0" />
+            <span className="text-[11px] font-bold tracking-[1.5px] text-[#5EB3FF]/60 uppercase">Safe to Spend</span>
+            <span className="text-[#5EB3FF] font-bold text-[13px] tabular-nums ml-0.5">
+              ${fmtMoney(safeToSpend, 0)}
+            </span>
+          </div>
+          <div className="flex-1 h-px bg-[#5EB3FF]/15" />
+        </div>
+      </div>
+      <p className="text-center text-[10px] text-white/20 mt-1.5 pl-6">
+        Goals above this line are prioritized before your spending freedom
+      </p>
+    </div>
+  );
+}
+
 // ── Main page ───────────────────────────────────────────────────────────────
 
 export default function Savings() {
@@ -268,6 +316,8 @@ export default function Savings() {
 
   const [goals, setGoals] = useState<BudgetItem[]>([]);
   const [reconciliation, setReconciliation] = useState<Reconciliation | null>(null);
+  const [stsData, setStsData] = useState<StsData | null>(null);
+  const [stsPosition, setStsPosition] = useState(0);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [spentConfirmId, setSpentConfirmId] = useState<string | null>(null);
 
@@ -279,7 +329,6 @@ export default function Savings() {
   const [addMonthly, setAddMonthly] = useState(false);
   const [addSubmitting, setAddSubmitting] = useState(false);
 
-  // monthly goal template — amount from the most recent isMonthlySavingGoal item
   const [monthlyGoalAmount, setMonthlyGoalAmount] = useState<number | null>(null);
   const [creatingMonthlyGoal, setCreatingMonthlyGoal] = useState(false);
 
@@ -289,10 +338,15 @@ export default function Savings() {
   const [allocateSubmitting, setAllocateSubmitting] = useState(false);
   const [allocatingAll, setAllocatingAll] = useState(false);
 
-  // affordability modal
+  // affordability modals
   const [affordabilityModal, setAffordabilityModal] = useState<{
     total: number;
     available: number;
+    onConfirm: () => void;
+  } | null>(null);
+  const [addAffordabilityModal, setAddAffordabilityModal] = useState<{
+    monthlyNeeded: number;
+    currentSts: number;
     onConfirm: () => void;
   } | null>(null);
 
@@ -312,12 +366,12 @@ export default function Savings() {
   if (!authResolved) return <LoadingScreen />;
   if (!session) { router.push("/login"); return null; }
 
-  // fetches all goals and the savings reconciliation in parallel, populating both state slices
   async function loadData() {
     try {
-      const [detailsRes, reconciliationRes] = await Promise.all([
+      const [detailsRes, reconciliationRes, stsRes] = await Promise.all([
         fetch(`${API}/user-details`, { credentials: "include" }),
         fetch(`${API}/savings-reconciliation`, { credentials: "include" }),
+        fetch(`${API}/safe-to-spend`, { credentials: "include" }),
       ]);
 
       if (!detailsRes.ok) { setLoadingState("error"); return; }
@@ -325,8 +379,6 @@ export default function Savings() {
       const data = await detailsRes.json();
       const allItems: BudgetItem[] = data.returnData.budgetItems ?? [];
 
-      // derive the user's preferred monthly savings amount from any past monthly goal
-      // (search all items including spent/deleted so the amount persists across months)
       const lastMonthly = [...allItems]
         .filter((i) => i.isMonthlySavingGoal)
         .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime())[0];
@@ -336,6 +388,13 @@ export default function Savings() {
         .filter((i) => !i.isDeleted)
         .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
       setGoals(allGoals);
+
+      // derive STS position from priority sentinel — goals >= STS_ABOVE_SENTINEL are above STS
+      const incompleteItems = allGoals.filter(
+        (g) => !g.isCompleted && Number(g.amountSaved) < Number(g.amount),
+      );
+      const aboveStsCount = incompleteItems.filter((g) => g.priority >= STS_ABOVE_SENTINEL).length;
+      setStsPosition(aboveStsCount);
 
       if (reconciliationRes.ok) {
         const rec = await reconciliationRes.json();
@@ -347,16 +406,19 @@ export default function Savings() {
         });
       }
 
+      if (stsRes.ok) {
+        const sts = await stsRes.json();
+        setStsData(sts.safeToSpend ?? null);
+      }
+
       setLoadingState("loaded");
     } catch {
       setLoadingState("error");
     }
   }
 
-  // hard-deletes a goal from the DB and removes it from local state optimistically
   async function handleDelete(id: string) {
     setConfirmDeleteId(null);
-    // optimistic removal — roll back via loadData if the request fails
     setGoals((prev) => prev.filter((g) => g.id !== id));
     try {
       const res = await fetch(`${API}/delete/budget-item`, {
@@ -368,7 +430,6 @@ export default function Savings() {
       if (!res.ok) { toast.error("Failed to delete goal."); loadData(); }
       else {
         toast.success("Goal deleted.");
-        // reload reconciliation
         const rec = await fetch(`${API}/savings-reconciliation`, { credentials: "include" });
         if (rec.ok) {
           const d = await rec.json();
@@ -378,10 +439,8 @@ export default function Savings() {
     } catch { toast.error("Something went wrong."); loadData(); }
   }
 
-  // soft-deletes a completed goal by setting isDeleted: true, removing it from the reconciliation total
   async function handleMarkSpent(id: string) {
     setSpentConfirmId(null);
-    // optimistic removal — the goal disappears immediately so the UI feels instant
     setGoals((prev) => prev.filter((g) => g.id !== id));
     try {
       const res = await fetch(`${API}/update-budget-item`, {
@@ -402,9 +461,7 @@ export default function Savings() {
     } catch { toast.error("Something went wrong."); loadData(); }
   }
 
-  // one-click creates a monthly savings goal for the current month using the user's established amount
   async function handleCreateMonthlyGoal() {
-    // no known amount — fall back to the add panel so the user can enter one manually
     if (!monthlyGoalAmount) { setAddMonthly(true); setShowAddPanel(true); return; }
     setCreatingMonthlyGoal(true);
     try {
@@ -459,9 +516,7 @@ export default function Savings() {
     finally { setCreatingMonthlyGoal(false); }
   }
 
-  // creates a new goal via the add panel, sets lowest priority when other goals exist, then appends to list
-  async function handleAddGoal(e: React.FormEvent) {
-    e.preventDefault();
+  async function submitAddGoal() {
     if (!addName.trim() || !addAmount || !addDate) return;
     setAddSubmitting(true);
     try {
@@ -479,7 +534,6 @@ export default function Savings() {
       if (!createRes.ok) { toast.error("Failed to add goal."); return; }
       const created = await createRes.json();
 
-      // set at lowest priority when other goals exist
       if (goals.length > 0 && created.data?.id) {
         await fetch(`${API}/update-budget-item`, {
           method: "POST",
@@ -516,7 +570,26 @@ export default function Savings() {
     finally { setAddSubmitting(false); }
   }
 
-  // calls the allocate endpoint and patches the goal in local state; closed over by the affordability modal
+  function handleAddGoal(e: React.FormEvent) {
+    e.preventDefault();
+    if (!addName.trim() || !addAmount || !addDate) return;
+
+    const months = monthsUntil(addDate);
+    const monthlyNeeded = parseFloat(addAmount) / months;
+    const currentSts = stsData?.safeToSpend ?? 0;
+
+    if (monthlyNeeded > currentSts) {
+      setAddAffordabilityModal({
+        monthlyNeeded,
+        currentSts,
+        onConfirm: () => { setAddAffordabilityModal(null); submitAddGoal(); },
+      });
+      return;
+    }
+
+    submitAddGoal();
+  }
+
   async function executeAllocate(item: BudgetItem, amt: number) {
     setAllocateSubmitting(true);
     try {
@@ -550,7 +623,6 @@ export default function Savings() {
     finally { setAllocateSubmitting(false); }
   }
 
-  // gates the allocation behind an affordability check before handing off to executeAllocate
   function handleAllocate(e: React.FormEvent) {
     e.preventDefault();
     if (!allocateItem) return;
@@ -558,7 +630,6 @@ export default function Savings() {
     const amt = parseFloat((monthly * allocateMonths).toFixed(2));
     if (amt <= 0) { toast.error("Monthly contribution is $0 — update the goal amount first."); return; }
     const available = reconciliation?.gap ?? 0;
-    // gap would go negative — surface the affordability modal instead of allocating silently
     if (amt > available) {
       setAffordabilityModal({ total: amt, available, onConfirm: () => executeAllocate(allocateItem, amt) });
       return;
@@ -566,7 +637,6 @@ export default function Savings() {
     executeAllocate(allocateItem, amt);
   }
 
-  // fans out allocation calls to all eligible goals in parallel; each call caps at the goal's target
   async function executeAllocateAll(eligible: BudgetItem[]) {
     setAllocatingAll(true);
     try {
@@ -603,13 +673,11 @@ export default function Savings() {
     finally { setAllocatingAll(false); }
   }
 
-  // computes the total monthly contribution across all incomplete goals and gates on affordability
   function handleAllocateAll() {
     const eligible = goals.filter((g) => !g.isCompleted && Number(g.amountSaved) < Number(g.amount));
     if (!eligible.length) { toast.error("All goals are already complete."); return; }
     const totalAll = parseFloat(eligible.reduce((sum, g) => sum + monthlyContribution(g), 0).toFixed(2));
     const available = reconciliation?.gap ?? 0;
-    // total exceeds available savings — prompt before committing all allocations
     if (totalAll > available) {
       setAffordabilityModal({ total: totalAll, available, onConfirm: () => executeAllocateAll(eligible) });
       return;
@@ -617,29 +685,42 @@ export default function Savings() {
     executeAllocateAll(eligible);
   }
 
-  // handles a completed drag — reorders the local list optimistically and persists new priorities
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    // compute the new order and persist it; UI updates immediately regardless of server response
+    // build the combined list including the STS sentinel
+    const incomplete = goals.filter((g) => !g.isCompleted && Number(g.amountSaved) < Number(g.amount));
+    const clampedPos = Math.min(stsPosition, incomplete.length);
+    const fullList = [
+      ...incomplete.slice(0, clampedPos).map((g) => g.id),
+      STS_ID,
+      ...incomplete.slice(clampedPos).map((g) => g.id),
+    ];
+
+    const oldIndex = fullList.indexOf(active.id as string);
+    const newIndex = fullList.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(fullList, oldIndex, newIndex);
+    const newStsPos = reordered.indexOf(STS_ID);
+    const orderedGoalIds = reordered.filter((id) => id !== STS_ID);
+
+    setStsPosition(newStsPos);
+
     setGoals((prev) => {
-      const oldIndex = prev.findIndex((g) => g.id === active.id);
-      const newIndex = prev.findIndex((g) => g.id === over.id);
-      const reordered = arrayMove(prev, oldIndex, newIndex);
-
-      const orderedIds = reordered.map((g) => g.id);
-
-      // fire-and-forget — if the request fails the priorities drift until next reload
-      fetch(`${API}/budget-items/reorder`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderedIds }),
-      }).catch(() => {/* silent */});
-
-      return reordered;
+      const completed = prev.filter((g) => g.isCompleted || Number(g.amountSaved) >= Number(g.amount));
+      const goalMap = new Map(incomplete.map((g) => [g.id, g]));
+      const reorderedIncomplete = orderedGoalIds.map((id) => goalMap.get(id)).filter(Boolean) as BudgetItem[];
+      return [...reorderedIncomplete, ...completed];
     });
+
+    fetch(`${API}/budget-items/reorder`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds: orderedGoalIds, stsPosition: newStsPos }),
+    }).catch(() => {/* silent */});
   }
 
   function closeAddPanel() {
@@ -650,13 +731,11 @@ export default function Savings() {
   if (loadingState === "error") return <ErrorDashboard onRetry={loadData} />;
 
   const loading = loadingState === "loading" || isPending;
-  const firstName = session.user.name?.split(" ")[0] ?? "";
   const allGoalsFunded =
     goals.length > 0 && goals.every((g) => Number(g.amountSaved) >= Number(g.amount));
 
   const incompleteGoals = goals.filter((g) => !g.isCompleted && Number(g.amountSaved) < Number(g.amount));
   const completedGoals = goals.filter((g) => g.isCompleted || Number(g.amountSaved) >= Number(g.amount));
-  // all completed goals count toward allocated until explicitly marked as spent
   const now = new Date();
   const hasMonthlyGoal = goals.some((g) => {
     if (!g.isMonthlySavingGoal) return false;
@@ -664,12 +743,30 @@ export default function Savings() {
     return due.getFullYear() === now.getFullYear() && due.getMonth() === now.getMonth();
   });
 
+  const clampedStsPos = Math.min(stsPosition, incompleteGoals.length);
+
+  // live affordability compute for the add form
+  const addParsedAmount = parseFloat(addAmount) || 0;
+  const addDatePast = dateIsPast(addDate);
+  const addMonthsLeft = addDate ? monthsUntil(addDate) : 0;
+  const addMonthlyNeeded = addParsedAmount > 0 && addMonthsLeft > 0
+    ? addParsedAmount / addMonthsLeft
+    : 0;
+  const addExceedsSts = addMonthlyNeeded > 0 && stsData != null && addMonthlyNeeded > stsData.safeToSpend;
+
+  // build the sortable items list including STS card
+  const sortableItems = [
+    ...incompleteGoals.slice(0, clampedStsPos).map((g) => g.id),
+    STS_ID,
+    ...incompleteGoals.slice(clampedStsPos).map((g) => g.id),
+  ];
+
   return (
     <div
       className="min-h-screen bg-[#111125] text-white"
       style={{ fontFamily: "var(--font-manrope), system-ui, sans-serif" }}
     >
-      {/* ── Affordability modal ────────────────────────────────────────── */}
+      {/* ── Allocation affordability modal ─────────────────────────────── */}
       {affordabilityModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="bg-[#16213E] rounded-[28px] p-7 max-w-sm w-full shadow-[inset_0_0_0_1px_rgba(249,115,22,0.18)] bg-[radial-gradient(ellipse_at_top,rgba(249,115,22,0.08),transparent_60%)]">
@@ -701,6 +798,46 @@ export default function Savings() {
                 className="flex-1 py-2.5 rounded-full bg-[#F97316]/15 text-[#F97316] text-[13px] font-bold hover:bg-[#F97316]/25 transition-colors"
               >
                 Allocate anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add goal affordability modal ───────────────────────────────── */}
+      {addAffordabilityModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-[#16213E] rounded-[28px] p-7 max-w-sm w-full shadow-[inset_0_0_0_1px_rgba(249,115,22,0.18)] bg-[radial-gradient(ellipse_at_top,rgba(249,115,22,0.08),transparent_60%)]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-[#F97316]/12 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-4.5 w-4.5 text-[#F97316]" />
+              </div>
+              <h3 className="text-[17px] font-extrabold tracking-[-0.3px]">This may strain your budget</h3>
+            </div>
+            <p className="text-[13px] text-white/55 leading-relaxed mb-1">
+              This goal requires{" "}
+              <span className="text-white font-semibold">${fmtMoney(addAffordabilityModal.monthlyNeeded, 2)}/mo</span> but your current safe to spend is only{" "}
+              <span className="text-white font-semibold">${fmtMoney(Math.max(0, addAffordabilityModal.currentSts), 2)}</span>.
+            </p>
+            <p className="text-[13px] text-white/55 leading-relaxed mb-6">
+              Adding it would push your safe-to-spend{" "}
+              <span className="text-[#F97316] font-semibold">
+                ${fmtMoney(addAffordabilityModal.monthlyNeeded - addAffordabilityModal.currentSts, 2)} below zero
+              </span>{" "}
+              this month. You can still add it — it'll just be a stretch goal.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setAddAffordabilityModal(null)}
+                className="flex-1 py-2.5 rounded-full border border-white/12 text-white/60 text-[13px] font-semibold hover:text-white hover:border-white/25 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => addAffordabilityModal.onConfirm()}
+                className="flex-1 py-2.5 rounded-full bg-[#F97316]/15 text-[#F97316] text-[13px] font-bold hover:bg-[#F97316]/25 transition-colors"
+              >
+                Add anyway
               </button>
             </div>
           </div>
@@ -779,9 +916,39 @@ export default function Savings() {
                   value={addDate}
                   onChange={(e) => setAddDate(e.target.value)}
                   required
-                  className="w-full bg-[#111125] border border-white/8 rounded-xl px-4 py-2.5 text-sm text-white/70 focus:outline-none focus:border-[#F5C400]/30 transition-colors scheme-dark"
+                  className={`w-full bg-[#111125] border rounded-xl px-4 py-2.5 text-sm text-white/70 focus:outline-none transition-colors scheme-dark ${addDatePast ? "border-[#F97316]/40 focus:border-[#F97316]/60" : "border-white/8 focus:border-[#F5C400]/30"}`}
                 />
+                {addDatePast && (
+                  <p className="text-[11px] text-[#F97316] mt-1.5 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                    This date is already past — you&apos;ll need to contribute the full amount immediately.
+                  </p>
+                )}
               </div>
+
+              {/* live monthly contribution preview */}
+              {addMonthlyNeeded > 0 && (
+                <div className={`rounded-2xl px-4 py-3.5 border ${addExceedsSts ? "bg-[#F97316]/8 border-[#F97316]/18" : "bg-[#F5C400]/8 border-[#F5C400]/18"}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-[11px] font-bold tracking-[1.2px] uppercase ${addExceedsSts ? "text-[#F97316]/70" : "text-[#F5C400]/70"}`}>
+                      Monthly contribution needed
+                    </span>
+                    <span className={`font-bold text-[15px] tabular-nums ${addExceedsSts ? "text-[#F97316]" : "text-[#F5C400]"}`}>
+                      ${fmtMoney(addMonthlyNeeded, 2)}/mo
+                    </span>
+                  </div>
+                  {addExceedsSts && stsData && (
+                    <p className="text-[11px] text-[#F97316]/80 leading-relaxed">
+                      Exceeds your current safe to spend of ${fmtMoney(stsData.safeToSpend, 2)} — you&apos;ll be prompted to confirm.
+                    </p>
+                  )}
+                  {!addExceedsSts && stsData && (
+                    <p className="text-[11px] text-white/40">
+                      ${fmtMoney(Math.max(0, stsData.safeToSpend - addMonthlyNeeded), 2)} safe to spend remaining after this goal
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-[10px] font-bold tracking-[1.5px] text-white/30 uppercase mb-1.5">
@@ -857,7 +1024,6 @@ export default function Savings() {
                 </button>
               </div>
 
-              {/* monthly share callout */}
               <div className="bg-[#F5C400]/8 border border-[#F5C400]/18 rounded-2xl px-4 py-3.5 mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <CalendarDays className="h-4 w-4 text-[#F5C400] shrink-0" />
@@ -868,7 +1034,6 @@ export default function Savings() {
                 </span>
               </div>
 
-              {/* goal progress */}
               <div className="bg-[#111125] rounded-2xl p-4 mb-6 border border-white/6">
                 <div className="flex justify-between text-[13px] mb-2">
                   <span className="text-white/50">Currently saved</span>
@@ -909,7 +1074,6 @@ export default function Savings() {
                       </button>
                     ))}
                   </div>
-                  {/* custom stepper for any value */}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -937,7 +1101,6 @@ export default function Savings() {
                   </div>
                 </div>
 
-                {/* total preview */}
                 <div className="bg-[#111125] rounded-xl px-4 py-3 border border-white/6">
                   <div className="flex justify-between text-[13px] mb-1">
                     <span className="text-white/45">Total to allocate</span>
@@ -968,7 +1131,6 @@ export default function Savings() {
 
       {/* ── Page content ───────────────────────────────────────────────── */}
       <main className="px-10 py-9 mx-auto w-full max-w-4xl">
-        {/* heading */}
         <div className="flex items-start justify-between mb-7">
           <div>
             <h1 className="text-[28px] font-extrabold tracking-[-0.5px]">Savings</h1>
@@ -1030,7 +1192,6 @@ export default function Savings() {
               </div>
             </div>
 
-            {/* allocate all button */}
             {incompleteGoals.some((g) => Number(g.amountSaved) < Number(g.amount)) && (
               <button
                 onClick={handleAllocateAll}
@@ -1121,7 +1282,7 @@ export default function Savings() {
           </div>
         ) : (
           <>
-            {/* Section A: Active goals */}
+            {/* Section A: Active goals with draggable STS card */}
             {incompleteGoals.length > 0 && (
               <DndContext
                 sensors={sensors}
@@ -1135,12 +1296,24 @@ export default function Savings() {
                     <span className="text-[11px] text-white/30 font-semibold shrink-0">{incompleteGoals.length} goal{incompleteGoals.length !== 1 ? 's' : ''}</span>
                   </div>
                   <SortableContext
-                    items={incompleteGoals.map((g) => g.id)}
+                    items={sortableItems}
                     strategy={verticalListSortingStrategy}
                   >
                     <div className="flex flex-col gap-4">
-                      {incompleteGoals.map((goal, index) =>
-                        confirmDeleteId === goal.id ? (
+                      {sortableItems.map((id) => {
+                        if (id === STS_ID) {
+                          return (
+                            <StsCard
+                              key={STS_ID}
+                              safeToSpend={stsData?.safeToSpend ?? 0}
+                            />
+                          );
+                        }
+                        const goal = incompleteGoals.find((g) => g.id === id)!;
+                        if (!goal) return null;
+                        const rank = incompleteGoals.findIndex((g) => g.id === id) + 1;
+
+                        return confirmDeleteId === goal.id ? (
                           <div
                             key={goal.id}
                             className="bg-[#16213E] rounded-[28px] p-6 border border-[#F97316]/20"
@@ -1170,12 +1343,12 @@ export default function Savings() {
                           <GoalCard
                             key={goal.id}
                             item={goal}
-                            rank={index + 1}
+                            rank={rank}
                             onDelete={(id) => { setConfirmDeleteId(id); setSpentConfirmId(null); }}
                             onAllocate={(item) => { setAllocateItem(item); setAllocateMonths(1); }}
                           />
-                        ),
-                      )}
+                        );
+                      })}
                     </div>
                   </SortableContext>
                 </div>

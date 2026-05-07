@@ -732,7 +732,7 @@ export default function Transactions() {
                         <p
                           className={`text-[15px] font-bold tabular-nums shrink-0 ${isIncome ? "text-[#3ecf8e]" : "text-white"}`}
                         >
-                          {isIncome ? "+" : "−"}${displayAmt.toFixed(2)}
+                          {isIncome ? "+" : "−"}${displayAmt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                     );

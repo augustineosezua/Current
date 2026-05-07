@@ -194,7 +194,7 @@ export default function Accounts({
 
         {/* footer */}
         <div className="px-8 py-4 text-xs text-white/25">
-          © Current · Bank-grade encryption · SOC 2 Type II
+          © Current · Secured by Plaid · Read-only access
         </div>
       </div>
 

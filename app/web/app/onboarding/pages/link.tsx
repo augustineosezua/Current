@@ -129,6 +129,17 @@ export default function LinkPage({
       body: JSON.stringify({ onboardingStep: "accounts" }),
     });
 
+    // fetch fresh user data so the Accounts step has the newly linked accounts
+    const detailsRes = await fetch(`${API}/user-details`, {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (detailsRes.ok) {
+      const details = await detailsRes.json();
+      setPlaidUser(details.returnData);
+    }
+
     setOnboardingStep("accounts");
   };
 
@@ -167,7 +178,7 @@ export default function LinkPage({
         </div>
 
         <div className="px-8 py-4 text-xs text-white/25">
-          © Current · Bank-grade encryption · SOC 2 Type II
+          © Current · Secured by Plaid · Read-only access
         </div>
       </div>
 

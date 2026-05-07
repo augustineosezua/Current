@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const DOCS = [
@@ -10,6 +10,12 @@ const DOCS = [
 export default function LegalPage() {
   const [active, setActive] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab === "terms") setActive(1);
+    else if (tab === "privacy") setActive(0);
+  }, []);
 
   return (
     <div className="flex flex-col h-screen bg-[#080d1a] text-white">

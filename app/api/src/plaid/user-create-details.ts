@@ -359,15 +359,19 @@ router.patch("/api/bills/:billId", async (req, res) => {
   }
 });
 
+// Goals above the STS card get priority >= this sentinel so they always sort ahead of the STS line.
+// Goals below the STS card get priorities 1..N (below the sentinel), giving them lower precedence.
+const STS_ABOVE_SENTINEL = 1000;
+
 // reassigns integer priority values so the drag-drop order survives page reloads
-// orderedIds[0] = highest priority (priority = length), last index = priority 1
+// orderedIds[0] = highest priority; stsPosition = how many goals sit above the STS separator
 router.post("/api/budget-items/reorder", async (req, res) => {
   // priorities drive the order in STS calculations and the savings reconciliation waterfall
   try {
     const userId = await requireAuth(req, res);
     if (!userId) return;
 
-    const { orderedIds } = req.body;
+    const { orderedIds, stsPosition } = req.body;
 
     // reject malformed payloads before any DB work
     if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
@@ -387,15 +391,24 @@ router.post("/api/budget-items/reorder", async (req, res) => {
       return res.status(403).json({ error: "One or more budget items not found or not owned by user" });
     }
 
+    // stsPosition = number of goals above the STS separator; clamp to valid range
+    const sts = typeof stsPosition === "number"
+      ? Math.max(0, Math.min(stsPosition, orderedIds.length))
+      : orderedIds.length;
+
     // single DB transaction so no goal is temporarily left with a stale priority mid-update
     await prisma.$transaction(
-      orderedIds.map((id, index) =>
-        prisma.budgetItem.update({
+      orderedIds.map((id, index) => {
+        // goals above STS get sentinel-offset priorities so they always outrank below-STS goals
+        const priority =
+          index < sts
+            ? STS_ABOVE_SENTINEL + (sts - index)
+            : orderedIds.length - index;
+        return prisma.budgetItem.update({
           where: { id, userId },
-          // index 0 gets the highest number = highest priority
-          data: { priority: orderedIds.length - index },
-        }),
-      ),
+          data: { priority },
+        });
+      }),
     );
 
     return res.json({ success: true });
