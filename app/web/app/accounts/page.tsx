@@ -7,7 +7,7 @@ import AppHeader from "../components/app-header";
 import LoadingScreen from "../components/loading-screen";
 import { toast } from "sonner";
 
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api`;
+const API = "/api";
 
 interface AccountSummary {
   id: string;

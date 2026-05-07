@@ -447,7 +447,7 @@ function pickFeaturedItem(items: BudgetItem[]): BudgetItem | null {
 // function starts
 export default function Dashboard() {
   const router = useRouter();
-  const API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api`;
+  const API = "/api";
   const { data: session, isPending } = useSession();
   const [authResolved, setAuthResolved] = useState(false);
   const [loadingState, setLoadingState] = useState<LoadingState>("loading");

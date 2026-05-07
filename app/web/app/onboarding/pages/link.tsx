@@ -44,7 +44,7 @@ export default function LinkPage({
   setOnboardingStep,
   setPlaidUser,
 }: LinkProps) {
-  const API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api`;
+  const API = "/api";
   const router = useRouter();
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [isPlaidUser, setIsPlaidUser] = useState(false);
