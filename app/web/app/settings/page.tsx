@@ -17,7 +17,6 @@ interface Account {
   accountSubType: string;
   institutionName: string;
   isSavingsAccount: boolean;
-  currentBalance: string | number;
   availableBalance: string | number;
 }
 
@@ -73,6 +72,7 @@ export default function SettingsPage() {
   const [userStatus, setUserStatus] = useState<string>("active");
 
   const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({});
+  const [savedToggleId, setSavedToggleId] = useState<string | null>(null);
   const [disconnectConfirmId, setDisconnectConfirmId] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
 
@@ -186,6 +186,8 @@ export default function SettingsPage() {
         body: JSON.stringify({ accountId, isSavings: newValue }),
       });
       if (!res.ok) throw new Error();
+      setSavedToggleId(accountId);
+      setTimeout(() => setSavedToggleId((prev) => (prev === accountId ? null : prev)), 2000);
     } catch {
       setToggleStates((prev) => ({ ...prev, [accountId]: !newValue }));
       toast.error("Failed to update savings account status.");
@@ -545,7 +547,7 @@ export default function SettingsPage() {
 
                           {/* balance */}
                           <p className="text-[15px] font-bold tabular-nums text-white shrink-0">
-                            ${Number(acc.currentBalance).toLocaleString("en-US", {
+                            ${Number(acc.availableBalance).toLocaleString("en-US", {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}
@@ -553,6 +555,11 @@ export default function SettingsPage() {
 
                           {/* savings toggle */}
                           <div className="flex items-center gap-2 shrink-0">
+                            {savedToggleId === acc.id && (
+                              <span className="text-[11px] font-semibold text-[#3ecf8e] animate-pulse">
+                                Saved
+                              </span>
+                            )}
                             <span className="text-[12px] text-white/40 font-medium">Savings account</span>
                             <button
                               onClick={() => handleSavingsToggle(acc.id, !toggleStates[acc.id])}
@@ -563,8 +570,8 @@ export default function SettingsPage() {
                               aria-checked={toggleStates[acc.id]}
                             >
                               <span
-                                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${
-                                  toggleStates[acc.id] ? "translate-x-4.5" : "translate-x-4.5"
+                                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                                  toggleStates[acc.id] ? "translate-x-5" : "translate-x-0.5"
                                 }`}
                               />
                             </button>
@@ -970,7 +977,93 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          {/* ── Section 4: Danger Zone ── */}
+          {/* ── Section 4: Password ── */}
+          <section>
+            <p className="text-[11px] font-bold tracking-[2px] text-white/40 uppercase mb-3 px-1">
+              Password
+            </p>
+            <div className="bg-[#16213E] rounded-[28px] p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              {pwOpen ? (
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[11px] font-bold tracking-[1.5px] text-white/40 uppercase">
+                        Current password
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={pwCurrent}
+                        onChange={(e) => setPwCurrent(e.target.value)}
+                        className="bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-sm font-semibold text-white placeholder-white/25 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[11px] font-bold tracking-[1.5px] text-white/40 uppercase">
+                        New password
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={pwNew}
+                        onChange={(e) => setPwNew(e.target.value)}
+                        className="bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-sm font-semibold text-white placeholder-white/25 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[11px] font-bold tracking-[1.5px] text-white/40 uppercase">
+                        Confirm new password
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={pwConfirm}
+                        onChange={(e) => setPwConfirm(e.target.value)}
+                        className={`bg-white/4 border rounded-xl px-4 py-2.5 text-sm font-semibold text-white placeholder-white/25 focus:outline-none transition-colors ${
+                          pwConfirm && pwNew !== pwConfirm
+                            ? "border-[#F97316]/60 focus:border-[#F97316]/70"
+                            : "border-white/8 focus:border-[#5EB3FF]/50"
+                        }`}
+                      />
+                    </div>
+                  </div>
+                  {pwConfirm && pwNew !== pwConfirm && (
+                    <p className="text-[#F97316] text-xs font-semibold">Passwords do not match.</p>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => { setPwOpen(false); setPwCurrent(""); setPwNew(""); setPwConfirm(""); }}
+                      className="px-4 py-2 rounded-xl text-[13px] font-semibold text-white/60 hover:text-white transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleChangePassword}
+                      disabled={pwSaving}
+                      className="px-5 py-2.5 rounded-xl bg-[#5EB3FF] text-[#111125] text-sm font-bold hover:bg-[#4da8f5] transition-colors disabled:opacity-50"
+                    >
+                      {pwSaving ? "Updating…" : "Update password"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[15px] font-semibold mb-0.5">Change password</p>
+                    <p className="text-[13px] text-white/40">Update the password used to sign in to Current.</p>
+                  </div>
+                  <button
+                    onClick={() => setPwOpen(true)}
+                    className="shrink-0 px-4 py-2.5 rounded-xl bg-white/6 text-white text-[13px] font-semibold hover:bg-white/10 transition-colors"
+                  >
+                    Change password
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── Section 5: Danger Zone ── */}
           <section>
             <p className="text-[11px] font-bold tracking-[2px] text-white/40 uppercase mb-3 px-1">
               Danger Zone
@@ -1042,63 +1135,6 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                {/* divider */}
-                <div className="border-t border-white/6" />
-
-                {/* change password */}
-                <div>
-                  <p className="text-[15px] font-bold mb-1">Change password</p>
-                  {pwOpen ? (
-                    <div className="mt-4 flex flex-col gap-3 max-w-sm">
-                      <input
-                        type="password"
-                        placeholder="Current password"
-                        value={pwCurrent}
-                        onChange={(e) => setPwCurrent(e.target.value)}
-                        className="bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-sm font-semibold text-white placeholder-white/25 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
-                      />
-                      <input
-                        type="password"
-                        placeholder="New password"
-                        value={pwNew}
-                        onChange={(e) => setPwNew(e.target.value)}
-                        className="bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-sm font-semibold text-white placeholder-white/25 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
-                      />
-                      <input
-                        type="password"
-                        placeholder="Confirm new password"
-                        value={pwConfirm}
-                        onChange={(e) => setPwConfirm(e.target.value)}
-                        className="bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-sm font-semibold text-white placeholder-white/25 focus:outline-none focus:border-[#5EB3FF]/50 transition-colors"
-                      />
-                      <div className="flex items-center gap-2 pt-1">
-                        <button
-                          onClick={() => { setPwOpen(false); setPwCurrent(""); setPwNew(""); setPwConfirm(""); }}
-                          className="px-4 py-2 rounded-xl text-[13px] font-semibold text-white/60 hover:text-white transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleChangePassword}
-                          disabled={pwSaving}
-                          className="px-5 py-2.5 rounded-xl bg-[#5EB3FF] text-[#111125] text-sm font-bold hover:bg-[#4da8f5] transition-colors disabled:opacity-50"
-                        >
-                          {pwSaving ? "Saving…" : "Update password"}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-3">
-                      <p className="text-[13px] text-white/40 mb-4">Update your account password.</p>
-                      <button
-                        onClick={() => setPwOpen(true)}
-                        className="px-4 py-2.5 rounded-xl bg-white/6 text-white text-[13px] font-semibold hover:bg-white/10 transition-colors"
-                      >
-                        Change password
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </section>

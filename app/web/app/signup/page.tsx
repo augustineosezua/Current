@@ -96,8 +96,12 @@ export default function SignUpPage() {
         </div>
 
         {/* footer */}
-        <div className="px-8 py-4 text-xs text-white/25">
-          © Current · Bank-grade encryption · SOC 2 Type II
+        <div className="px-8 py-4 text-xs text-white/25 flex items-center gap-3">
+          <span>© Current</span>
+          <span>·</span>
+          <Link href="/legal" className="hover:text-white/50 transition-colors">Privacy Policy</Link>
+          <span>·</span>
+          <Link href="/legal" className="hover:text-white/50 transition-colors">Terms</Link>
         </div>
       </div>
 
@@ -206,6 +210,18 @@ export default function SignUpPage() {
                 )}
                 {loading ? "Creating account…" : "Create account →"}
               </button>
+
+              <p className="text-[11px] text-white/25 text-center leading-relaxed">
+                By creating an account you agree to our{" "}
+                <Link href="/legal" className="text-white/40 hover:text-white/60 underline underline-offset-2 transition-colors">
+                  Terms & Conditions
+                </Link>{" "}
+                and{" "}
+                <Link href="/legal" className="text-white/40 hover:text-white/60 underline underline-offset-2 transition-colors">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
             </form>
 
             {/* switch link */}

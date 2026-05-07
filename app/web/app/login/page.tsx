@@ -70,7 +70,10 @@ export default function LoginPage() {
     try {
       const result = await authClient.requestPasswordReset({
         email,
-        redirectTo: "/reset-password",
+        redirectTo:
+          typeof window !== "undefined"
+            ? `${window.location.origin}/reset-password`
+            : "/reset-password",
       });
 
       if (result?.error) {
@@ -120,8 +123,12 @@ export default function LoginPage() {
         </div>
 
         {/* footer */}
-        <div className="px-8 py-4 text-xs text-white/25">
-          © Current · Bank-grade encryption · SOC 2 Type II
+        <div className="px-8 py-4 text-xs text-white/25 flex items-center gap-3">
+          <span>© Current</span>
+          <span>·</span>
+          <Link href="/legal" className="hover:text-white/50 transition-colors">Privacy Policy</Link>
+          <span>·</span>
+          <Link href="/legal" className="hover:text-white/50 transition-colors">Terms</Link>
         </div>
       </div>
 

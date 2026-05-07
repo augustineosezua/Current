@@ -87,10 +87,38 @@ router.get("/api/user-details", async (req, res) => {
       },
     });
 
+    let userSettings = userWithSettings?.userSettings ?? null;
+
+    // one-time migration for existing users: derive the correct step from data and persist it
+    if (!userSettings || userSettings.onboardingStep === "intro") {
+      let derivedStep = "intro";
+      if (plaidUser) {
+        derivedStep = "connect";
+        if (plaidUser.bankAccounts?.length > 0) {
+          derivedStep = "accounts";
+          if (plaidUser.bankAccounts.some((a: { isSavingsAccount: boolean }) => a.isSavingsAccount)) {
+            derivedStep = "setup";
+            if (userSettings?.nextPaychequeDate) {
+              derivedStep = "complete";
+            }
+          }
+        }
+      }
+
+      if (derivedStep !== "intro") {
+        userSettings = await prisma.userSettings.upsert({
+          where: { userId },
+          update: { onboardingStep: derivedStep },
+          create: { id: crypto.randomUUID(), userId, notificationsEnabled: false, onboardingStep: derivedStep },
+        });
+      }
+    }
+
     const returnData = {
       plaidUser,
-      userSettings: userWithSettings?.userSettings,
+      userSettings,
       userStatus: userWithSettings?.status ?? "active",
+      onboardingStep: userSettings?.onboardingStep ?? "intro",
       transactions,
       budgetItems,
       bankAccounts,
@@ -208,6 +236,60 @@ router.get("/api/bills/suggestions", async (req, res) => {
   } catch (err) {
     console.error("Error fetching bill suggestions:", err);
     return res.status(500).json({ error: "Error fetching bill suggestions" });
+  }
+});
+
+// returns accounts enriched with month-to-date spending totals and transaction counts
+router.get("/api/accounts/summary", async (req, res) => {
+  try {
+    const userId = await requireAuth(req, res);
+    if (!userId) return;
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const accounts = await prisma.bankAccounts.findMany({
+      where: { userId },
+      include: {
+        transactions: {
+          where: { date: { gte: startOfMonth } },
+          select: { amount: true, date: true },
+        },
+      },
+      orderBy: { availableBalance: "desc" },
+    });
+
+    const result = accounts.map((acc) => {
+      const txns = acc.transactions;
+      // Plaid: positive amount = outflow (spending), negative = inflow (income/refund)
+      const monthSpent = txns
+        .filter((t) => t.amount.toNumber() > 0)
+        .reduce((sum, t) => sum + t.amount.toNumber(), 0);
+      const lastTxnDate = txns.length > 0
+        ? txns.reduce((latest, t) => (t.date > latest ? t.date : latest), txns[0].date)
+        : null;
+
+      return {
+        id: acc.id,
+        plaidAccountId: acc.plaidAccountId,
+        accountName: acc.accountName,
+        accountType: acc.accountType,
+        accountSubType: acc.accountSubType,
+        institutionName: acc.institutionName,
+        isSavingsAccount: acc.isSavingsAccount,
+        availableBalance: acc.availableBalance,
+        currentBalance: acc.currentBalance,
+        linkedAt: acc.linkedAt,
+        monthSpent: Math.round(monthSpent * 100) / 100,
+        txnCount: txns.length,
+        lastTxnDate,
+      };
+    });
+
+    return res.json({ accounts: result });
+  } catch (error) {
+    console.error("Error fetching accounts summary:", error);
+    return res.status(500).json({ error: "Error fetching accounts summary" });
   }
 });
 

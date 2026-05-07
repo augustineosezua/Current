@@ -110,7 +110,7 @@ export default function Home() {
             type="button"
             onClick={handleLogoClick}
             className="flex hover:cursor-pointer items-center gap-2.5 text-[18px] font-extrabold tracking-[-0.3px] text-white transition-colors hover:text-white/80"
-            aria-label="Refresh Current homepage and return to top"
+            aria-label="Return to top"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#5EB3FF] text-[16px] font-black text-[#1A1A2E]">
               C
@@ -134,7 +134,7 @@ export default function Home() {
               href="/signup"
               className="inline-flex h-9 items-center rounded-full bg-[#4B9FFF] px-5 text-sm font-semibold text-[#07090F] transition-colors hover:bg-[#6ab3ff]"
             >
-              Get started free
+              Join the beta
             </Link>
           </div>
         </div>
@@ -145,7 +145,6 @@ export default function Home() {
         ref={setHeroElement}
         className={`relative overflow-hidden flex min-h-screen items-center pt-16 ${fade(heroVisible, 'delay-150')}`}
       >
-        {/* ambient blue glow */}
         <div className="pointer-events-none absolute -top-32 right-0 h-175 w-175 rounded-full bg-[#4B9FFF]/6 blur-[140px]" />
         <div className="pointer-events-none absolute bottom-0 left-1/4 h-175 w-175 rounded-full bg-[#4B9FFF]/4 blur-[100px]" />
         <div className="mx-auto w-full max-w-280 px-6 py-24 md:px-12">
@@ -153,16 +152,16 @@ export default function Home() {
 
             {/* Left: copy */}
             <div className="flex flex-col gap-6">
-              <span className="self-start rounded-xl border border-[#4B9FFF]/30 px-3 py-1.5 text-xs font-medium tracking-[0.07em] text-[#4B9FFF]">
-                Now in beta · Canada only
+              <span className="self-start rounded-xl border border-[#4B9FFF]/30 bg-[#4B9FFF]/5 px-3 py-1.5 text-xs font-semibold tracking-[0.07em] text-[#4B9FFF]">
+                Beta · Canada only · Free
               </span>
 
               <h1 className="text-[clamp(36px,5vw,56px)] font-bold leading-[1.1] tracking-[-0.04em] text-white">
-                Know exactly what you can spend.
+                Finally know if you can actually afford it.
               </h1>
 
               <p className="text-lg leading-[1.65] text-white/50">
-                Current connects to your Canadian bank and gives you one number — how much you can safely spend today without touching your savings or missing a bill.
+                Current connects to your Canadian bank and gives you one honest number — what you can spend today without touching your rent money, missing a bill, or raiding your savings.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -210,7 +209,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#4B9FFF]" />
-                      <span className="text-[13px] text-white/45">Total balance</span>
+                      <span className="text-[13px] text-white/45">Checking balance</span>
                     </div>
                     <span className="[font-family:var(--font-grotesk)] text-[13px] text-white/45">
                       +$1,450.00
@@ -220,7 +219,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#2DD4A0]" />
-                      <span className="text-[13px] text-white/45">Expected income</span>
+                      <span className="text-[13px] text-white/45">Next paycheque</span>
                     </div>
                     <span className="[font-family:var(--font-grotesk)] text-[13px] text-white/45">
                       +$336.00
@@ -262,16 +261,16 @@ export default function Home() {
       >
         <div className="mx-auto max-w-180 px-6 text-center md:px-12">
           <p className="mb-5 text-xs uppercase tracking-[0.14em] text-[#4B9FFF]">
-            The problem with money apps
+            The problem
           </p>
           <h2 className="text-[clamp(26px,4vw,44px)] font-bold tracking-[-0.03em] text-white leading-[1.15] mb-8">
-            Most apps show you everything except what actually matters.
+            Your balance doesn&apos;t tell you what you can actually spend.
           </h2>
           <p className="mb-5 text-base leading-[1.7] text-white/50">
-            Dashboards, graphs, category breakdowns, net worth calculators. You open the app, see a wall of numbers, and still leave not knowing if you can afford dinner.
+            You check your account, see $800, and think you&apos;re fine — then rent comes out on Friday, your phone bill hits Monday, and you&apos;re doing mental math at the grocery store hoping it works out.
           </p>
           <p className="text-base leading-[1.7] text-white/50">
-            Current strips that away. One number. Recalculated in real time. Built around how students and young adults actually live.
+            Current does the math for you. It subtracts what&apos;s already spoken for and shows you one number you can trust: what you can actually spend right now.
           </p>
         </div>
       </section>
@@ -288,7 +287,7 @@ export default function Home() {
               How it works
             </p>
             <h2 className="text-[clamp(26px,4vw,44px)] font-bold tracking-[-0.03em] text-white leading-[1.15]">
-              Up and running in three steps.
+              Set up in about three minutes.
             </h2>
           </div>
 
@@ -300,7 +299,7 @@ export default function Home() {
               <div className="relative pt-16">
                 <h3 className="text-[17px] font-semibold text-white mb-3">Link your bank</h3>
                 <p className="text-sm leading-[1.65] text-white/50">
-                  Connect securely through Plaid. Your credentials never touch our servers. Works with every major Canadian bank.
+                  Connect securely through Plaid in under a minute. Works with every major Canadian bank — TD, RBC, Scotiabank, and more.
                 </p>
               </div>
             </div>
@@ -310,9 +309,9 @@ export default function Home() {
                 02
               </span>
               <div className="relative pt-16">
-                <h3 className="text-[17px] font-semibold text-white mb-3">Set your savings goal</h3>
+                <h3 className="text-[17px] font-semibold text-white mb-3">Tell us your bills and goals</h3>
                 <p className="text-sm leading-[1.65] text-white/50">
-                  Tell Current what you want to save each period. That amount is protected before your Safe-To-Spend is ever calculated.
+                  Add rent, subscriptions, your paycheque schedule, and how much you want to save. Current locks those in before calculating your number.
                 </p>
               </div>
             </div>
@@ -322,9 +321,9 @@ export default function Home() {
                 03
               </span>
               <div className="relative pt-16">
-                <h3 className="text-[17px] font-semibold text-white mb-3">Spend with confidence</h3>
+                <h3 className="text-[17px] font-semibold text-white mb-3">Spend without second-guessing</h3>
                 <p className="text-sm leading-[1.65] text-white/50">
-                  Your Safe-To-Spend updates in real time as money moves. Bills coming up? Already subtracted. Paycheck incoming? Already counted.
+                  Your Safe-To-Spend updates as money moves. Bill coming up? Already subtracted. Paycheque incoming? Already counted.
                 </p>
               </div>
             </div>
@@ -340,10 +339,10 @@ export default function Home() {
         <div className="mx-auto max-w-280 px-6 md:px-12">
           <div className="text-center mb-16">
             <p className="mb-5 text-xs uppercase tracking-[0.14em] text-[#4B9FFF]">
-              Built different
+              What you get
             </p>
             <h2 className="text-[clamp(26px,4vw,44px)] font-bold tracking-[-0.03em] text-white leading-[1.15]">
-              Everything your balance can&apos;t tell you.
+              Everything your balance isn&apos;t telling you.
             </h2>
           </div>
 
@@ -352,31 +351,31 @@ export default function Home() {
               <div className="mb-5 h-1.5 w-1.5 rounded-full bg-[#4B9FFF]" />
               <h3 className="text-[17px] font-semibold text-white mb-3">Safe-To-Spend</h3>
               <p className="text-sm leading-[1.65] text-white/50">
-                Not a balance. Not a budget. One number that accounts for income, bills, savings, and what you&apos;ve already spent.
+                One number that accounts for your balance, upcoming bills, savings goal, and what you&apos;ve already spent this month. No spreadsheet needed.
               </p>
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-[#111722] p-8">
               <div className="mb-5 h-1.5 w-1.5 rounded-full bg-[#2DD4A0]" />
-              <h3 className="text-[17px] font-semibold text-white mb-3">Savings protection</h3>
+              <h3 className="text-[17px] font-semibold text-white mb-3">Savings that actually stick</h3>
               <p className="text-sm leading-[1.65] text-white/50">
-                Your savings goal is locked in before your STS is calculated. You can&apos;t accidentally spend what you&apos;re trying to save.
+                Set a savings goal and Current hides it from your spendable amount. You can&apos;t accidentally spend what you&apos;re trying to keep.
               </p>
             </div>
 
             <div className="rounded-3xl border border-[#4B9FFF]/20 bg-[#111722] p-8">
               <div className="mb-5 h-1.5 w-1.5 rounded-full bg-[#4B9FFF]" />
-              <h3 className="text-[17px] font-semibold text-white mb-3">Real-time sync</h3>
+              <h3 className="text-[17px] font-semibold text-white mb-3">Automatic transaction sync</h3>
               <p className="text-sm leading-[1.65] text-white/50">
-                Transactions from your linked accounts update your number automatically. No manual entry required.
+                Every transaction from your linked bank updates your number in real time. No logging purchases manually, ever.
               </p>
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-[#111722] p-8">
               <div className="mb-5 h-1.5 w-1.5 rounded-full bg-[#F97316]" />
-              <h3 className="text-[17px] font-semibold text-white mb-3">Bill awareness</h3>
+              <h3 className="text-[17px] font-semibold text-white mb-3">Bills subtracted up front</h3>
               <p className="text-sm leading-[1.65] text-white/50">
-                Upcoming bills are factored in the moment they&apos;re detected. Your number is always honest about what&apos;s already spoken for.
+                Rent, subscriptions, phone bill — all factored in before you see your number. What you see is genuinely what you have to spend.
               </p>
             </div>
           </div>
@@ -393,7 +392,7 @@ export default function Home() {
             Your data stays yours.
           </h2>
           <p className="mb-10 text-base leading-[1.7] text-white/50">
-            Current uses Plaid, the same secure connection layer trusted by millions of Canadians. We read transactions. We never touch your money. Bank-level encryption throughout.
+            Current uses Plaid — the same secure connection trusted by millions of Canadians. We can only read your transactions. We never see your login credentials and we can never move your money.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <span className="rounded-full border border-[#4B9FFF]/25 px-4 py-2 text-xs text-[#4B9FFF]/70">
@@ -404,6 +403,9 @@ export default function Home() {
             </span>
             <span className="rounded-full border border-[#4B9FFF]/25 px-4 py-2 text-xs text-[#4B9FFF]/70">
               Read-only access
+            </span>
+            <span className="rounded-full border border-[#4B9FFF]/25 px-4 py-2 text-xs text-[#4B9FFF]/70">
+              We never touch your money
             </span>
           </div>
         </div>
@@ -418,39 +420,62 @@ export default function Home() {
           <div className="h-125 w-175 rounded-full bg-[#4B9FFF]/9 blur-[100px]" />
         </div>
         <div className="relative mx-auto max-w-280 px-6 text-center md:px-12">
-          <h2 className="text-[clamp(28px,4.5vw,52px)] font-bold tracking-[-0.04em] text-white leading-[1.1] mb-5">
-            Stop guessing. Start spending with clarity.
+          <span className="mb-6 inline-block rounded-xl border border-[#4B9FFF]/30 bg-[#4B9FFF]/5 px-3 py-1.5 text-xs font-semibold tracking-[0.07em] text-[#4B9FFF]">
+            Currently in beta — free to use
+          </span>
+          <h2 className="text-[clamp(28px,4.5vw,52px)] font-bold tracking-[-0.04em] text-white leading-[1.1] mb-5 mt-4">
+            Stop doing the math in your head.
           </h2>
           <p className="mb-10 text-base text-white/50">
-            Free while in beta. No credit card required. Takes about 3 minutes to set up.
+            Takes about 3 minutes to set up. No credit card. Works with every major Canadian bank.
           </p>
           <Link
             href="/signup"
             className="inline-flex h-14 items-center justify-center rounded-full bg-[#4B9FFF] px-10 text-base font-semibold text-[#07090F] transition-colors hover:bg-[#6ab3ff]"
           >
-            Create your account
+            Create your free account
           </Link>
         </div>
       </section>
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
-      <footer className="border-t border-white/10 bg-[#07090F] py-8">
-        <div className="mx-auto flex max-w-280 flex-col items-center justify-between gap-4 px-6 text-center md:flex-row md:px-12 md:text-left">
-          <span className="text-sm text-white/30">
-            Current · A Chicken Labs product
-          </span>
-          <div className="flex items-center gap-6">
-            <span className="text-xs text-white/30">
-              Privacy
-            </span>
-            <span className="text-xs text-white/30">
-              Terms
-            </span>
-            <span className="text-xs text-white/30">
-              Contact
+      <footer className="border-t border-white/10 bg-[#07090F] py-10">
+        <div className="mx-auto max-w-280 px-6 md:px-12">
+          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+            <div className="flex items-center gap-2.5 text-[15px] font-extrabold tracking-[-0.3px] text-white/70">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#5EB3FF] text-[13px] font-black text-[#1A1A2E]">
+                C
+              </span>
+              Current
+            </div>
+
+            <div className="flex items-center gap-6">
+              <Link href="/legal" className="text-xs text-white/35 hover:text-white/60 transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/legal" className="text-xs text-white/35 hover:text-white/60 transition-colors">
+                Terms &amp; Conditions
+              </Link>
+            </div>
+
+            <span className="text-xs text-white/25">
+              © 2026 Augustine Osezua
             </span>
           </div>
-          <span className="text-xs text-white/30">© 2025 Chicken Labs</span>
+
+          <div className="mt-6 pt-6 border-t border-white/5 text-center">
+            <p className="text-xs text-white/20 leading-relaxed max-w-lg mx-auto">
+              Current is in beta. Features may change. Not affiliated with any financial institution.
+              By using Current you agree to our{' '}
+              <Link href="/legal" className="underline underline-offset-2 hover:text-white/40 transition-colors">
+                Terms &amp; Conditions
+              </Link>{' '}
+              and{' '}
+              <Link href="/legal" className="underline underline-offset-2 hover:text-white/40 transition-colors">
+                Privacy Policy
+              </Link>.
+            </p>
+          </div>
         </div>
       </footer>
 

@@ -11,10 +11,10 @@ export default function Account({ account }: { account: any }) {
     );
 
     const sortedSavings = savings.sort(
-      (a: any, b: any) => b.balance - a.currentBalance,
+      (a: any, b: any) => b.balance - a.availableBalance,
     );
     const sortedSpendings = spendings.sort(
-      (a: any, b: any) => b.balance - a.currentBalance,
+      (a: any, b: any) => b.balance - a.availableBalance,
     );
 
     return [sortedSpendings[0], sortedSavings[0]];

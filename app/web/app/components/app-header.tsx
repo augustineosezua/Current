@@ -6,7 +6,7 @@ import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type ActivePage = "home" | "transactions" | "bills" | "savings" | "settings";
+type ActivePage = "home" | "accounts" | "transactions" | "bills" | "savings" | "settings";
 
 interface AppHeaderProps {
   activePage: ActivePage;
@@ -14,6 +14,7 @@ interface AppHeaderProps {
 
 const NAV_ITEMS: { label: string; href: string; page: ActivePage }[] = [
   { label: "Home", href: "/dashboard", page: "home" },
+  { label: "Accounts", href: "/accounts", page: "accounts" },
   { label: "Transactions", href: "/transactions", page: "transactions" },
   { label: "Bills", href: "/bills", page: "bills" },
   { label: "Savings", href: "/savings", page: "savings" },

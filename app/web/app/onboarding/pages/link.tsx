@@ -122,6 +122,13 @@ export default function LinkPage({
       return;
     }
 
+    await fetch(`${API}/settings`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ onboardingStep: "accounts" }),
+    });
+
     setOnboardingStep("accounts");
   };
 

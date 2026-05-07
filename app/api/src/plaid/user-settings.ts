@@ -17,6 +17,7 @@ async function requireAuth(req: express.Request, res: express.Response): Promise
 }
 
 const VALID_FREQUENCIES = ["weekly", "biweekly", "semimonthly", "monthly", "yearly", "daily"];
+const VALID_ONBOARDING_STEPS = ["intro", "connect", "accounts", "setup", "complete"];
 
 // fetches user settings, creating a default row if one doesn't exist yet
 router.get("/api/settings", async (req, res) => {
@@ -61,6 +62,7 @@ router.patch("/api/settings", async (req, res) => {
       nextPaychequeDate,
       notificationsEnabled,
       desiredMinimumMonthlySpend,
+      onboardingStep,
     } = req.body;
 
     // negative values would corrupt safe-to-spend calculations
@@ -86,6 +88,10 @@ router.patch("/api/settings", async (req, res) => {
       return res.status(400).json({ error: "notificationsEnabled must be a boolean" });
     }
 
+    if (onboardingStep !== undefined && !VALID_ONBOARDING_STEPS.includes(onboardingStep)) {
+      return res.status(400).json({ error: `onboardingStep must be one of: ${VALID_ONBOARDING_STEPS.join(", ")}` });
+    }
+
     // reject non-date strings before they reach the DB
     let parsedDate: Date | undefined;
     if (nextPaychequeDate !== undefined) {
@@ -101,6 +107,7 @@ router.patch("/api/settings", async (req, res) => {
     if (parsedDate !== undefined) updateData.nextPaychequeDate = parsedDate;
     if (desiredMinimumMonthlySpend !== undefined) updateData.desiredMinimumMonthlySpend = desiredMinimumMonthlySpend;
     if (notificationsEnabled !== undefined) updateData.notificationsEnabled = notificationsEnabled;
+    if (onboardingStep !== undefined) updateData.onboardingStep = onboardingStep;
 
     const settings = await prisma.userSettings.upsert({
       where: { userId },

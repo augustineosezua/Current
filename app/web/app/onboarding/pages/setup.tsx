@@ -284,6 +284,7 @@ export default function SetupPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             desiredMinimumMonthlySpend: parseFloat(spendAmount) || 0,
+            onboardingStep: "complete",
           }),
         });
 
@@ -298,7 +299,12 @@ export default function SetupPage() {
     if (subStep < SUB_STEPS.length - 1) {
       setSubStep(subStep + 1);
     } else {
-      router.push("/dashboard");
+      fetch(`${API}/settings`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onboardingStep: "complete" }),
+      }).finally(() => router.push("/dashboard"));
     }
   };
 

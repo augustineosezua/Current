@@ -65,7 +65,6 @@ interface Account {
   accountSubType: string;
   institutionName: string;
   isSavingsAccount: boolean;
-  currentBalance: string | number;
   availableBalance: string | number;
 }
 
@@ -478,9 +477,12 @@ export default function Dashboard() {
 
   async function getUserData() {
     if (!session) {
+      toast.dismiss();
       router.push("/login");
       return;
     }
+    // Clear any toasts left over from a previous failed load before fetching.
+    toast.dismiss();
     try {
       // fetch user details and bills in parallel
       const [detailsRes, billsRes] = await Promise.all([
@@ -503,23 +505,18 @@ export default function Dashboard() {
       }
 
       const data = await detailsRes.json();
-      const { plaidUser, userSettings } = data.returnData;
+      const { onboardingStep, userStatus } = data.returnData;
 
-      // verify onboarding is complete before showing dashboard
-      if (!plaidUser) {
-        router.push("/onboarding?step=intro");
+      if (userStatus === "pending_deletion") {
+        toast.dismiss();
+        toast.error("Your account is scheduled for deletion. Go to Settings to cancel.", { duration: 6000 });
+        router.push("/settings");
         return;
       }
-      if (!plaidUser.bankAccounts?.length) {
-        router.push("/onboarding?step=connect");
-        return;
-      }
-      if (!plaidUser.bankAccounts.some((a: { isSavingsAccount: boolean }) => a.isSavingsAccount)) {
-        router.push("/onboarding?step=accounts");
-        return;
-      }
-      if (!userSettings?.nextPaychequeDate) {
-        router.push("/onboarding?step=setup");
+
+      if (onboardingStep !== "complete") {
+        toast.dismiss();
+        router.push(`/onboarding?step=${onboardingStep ?? "intro"}`);
         return;
       }
 
@@ -553,7 +550,7 @@ export default function Dashboard() {
       setSaveToSpend(sts.safeToSpend);
       setLoadingState("loaded");
     } catch {
-      toast.error("Something went wrong.");
+      toast.error("Something went wrong. Check your connection and try again.");
       setLoadingState("error");
     }
   }
@@ -845,10 +842,10 @@ export default function Dashboard() {
                         {acc.accountName}
                       </p>
                       <p
-                        className={`mt-4 text-[22px] font-bold tracking-[-0.5px] tabular-nums ${Number(acc.currentBalance) < 0 ? "text-white/60" : "text-white"}`}
+                        className={`mt-4 text-[22px] font-bold tracking-[-0.5px] tabular-nums ${Number(acc.availableBalance) < 0 ? "text-white/60" : "text-white"}`}
                       >
-                        {Number(acc.currentBalance) < 0 ? "−" : ""}$
-                        {Math.abs(Number(acc.currentBalance)).toLocaleString(
+                        {Number(acc.availableBalance) < 0 ? "−" : ""}$
+                        {Math.abs(Number(acc.availableBalance)).toLocaleString(
                           "en-US",
                           {
                             minimumFractionDigits: 2,

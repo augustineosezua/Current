@@ -67,15 +67,15 @@ export default function Accounts({
 
   const spendingTotal = accounts
     .filter((a) => !savingsMap[a.id])
-    .reduce((sum, a) => sum + (Number(a.currentBalance) || 0), 0);
+    .reduce((sum, a) => sum + (Number(a.availableBalance) || 0), 0);
 
   const savingsTotal = accounts
     .filter((a) => savingsMap[a.id])
-    .reduce((sum, a) => sum + (Number(a.currentBalance) || 0), 0);
+    .reduce((sum, a) => sum + (Number(a.availableBalance) || 0), 0);
 
   const deleteAccount = async (accountId: string) => {
     setRemovingId(accountId);
-    const deleted = await fetch(`${API}/delete-bank-account`, {
+    const deleted = await fetch(`${API}/delete/bank-account`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -88,7 +88,7 @@ export default function Accounts({
       return;
     }
 
-    // remove deleted account from local state to update UI
+    setDeletingId(null);
     setAccounts((prev) => prev.filter((a) => a.id !== accountId));
     toast.success("Account removed.");
   };
@@ -106,6 +106,12 @@ export default function Accounts({
         }),
       });
     }
+    await fetch(`${API}/settings`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ onboardingStep: "setup" }),
+    });
     setCategorizationCompleted(true);
     setOnboardingStep("setup");
   };
@@ -302,7 +308,7 @@ export default function Accounts({
             {!loading &&
               accounts.map((account: any) => {
                 const isSavings = savingsMap[account.id] ?? false;
-                const bal = Number(account.currentBalance) || 0;
+                const bal = Number(account.availableBalance) || 0;
                 const subtypeRaw = clean(account.accountSubType ?? "");
                 const subtype = subtypeRaw
                   ? subtypeRaw.charAt(0).toUpperCase() + subtypeRaw.slice(1)
@@ -392,10 +398,7 @@ export default function Accounts({
                             Cancel
                           </button>
                           <button
-                            onClick={() => {
-                              deleteAccount(account.id);
-                              setDeletingId(null);
-                            }}
+                            onClick={() => deleteAccount(account.id)}
                             className="text-[12px] text-white/70 hover:text-white font-bold transition-colors"
                           >
                             Remove

@@ -84,59 +84,45 @@ export default function Onboarding() {
     }
   }, [onboardingStep, authResolved, pageIsLoading]);
 
-  const findCurrentStatus = async (userId: string) => {
-    // first check for plaidUser
-    const userDetails = await fetch(`${API}/user-details`, {
+  const findCurrentStatus = async (_userId: string) => {
+    const res = await fetch(`${API}/user-details`, {
       method: "GET",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     });
 
-    if (!userDetails.ok) {
+    if (!res.ok) {
       toast.error("Failed to fetch user details.");
       return;
     }
-    const userDetailsData = await userDetails.json();
-    const plaidUser = userDetailsData.returnData.plaidUser;
-    const userSettings = userDetailsData.returnData.userSettings;
 
-    // no plaid connection at all → intro
-    if (!plaidUser) {
-      setPlaidUser(null);
-      setOnboardingStep("intro");
-      setPageIsLoading(false);
+    const data = await res.json();
+    const step: string = data.returnData.onboardingStep ?? "intro";
+
+    setPlaidUser(data.returnData);
+
+    // keep completion flags consistent so UI components render correctly
+    if (["connect", "accounts", "setup", "complete"].includes(step)) setIntroCompleted(true);
+    if (["accounts", "setup", "complete"].includes(step)) setCategorizationCompleted(true);
+    if (step === "complete") {
+      router.push("/dashboard");
       return;
     }
 
-    setPlaidUser(userDetailsData.returnData);
-
-    // plaid connected but no bank accounts imported yet → connect
-    if (!plaidUser.bankAccounts?.length) {
-      setOnboardingStep("connect");
-      setPageIsLoading(false);
-      return;
-    }
-
-    // accounts exist but none categorized as savings → accounts
-    if (!plaidUser.bankAccounts.some((a: any) => a.isSavingsAccount === true)) {
-      setOnboardingStep("accounts");
-      setPageIsLoading(false);
-      return;
-    }
-
-    // savings categorized but setup not done → setup
-    if (!userSettings?.nextPaychequeDate) {
-      setCategorizationCompleted(true);
-      setOnboardingStep("setup");
-      setPageIsLoading(false);
-      return;
-    }
-
-    // onboarding fully complete — send to dashboard
-    router.push("/dashboard");
+    setOnboardingStep(step);
+    setPageIsLoading(false);
   };
+
+  // persist intro → connect transition in DB when intro is dismissed
+  useEffect(() => {
+    if (!introCompleted) return;
+    fetch(`${API}/settings`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ onboardingStep: "connect" }),
+    }).catch(() => {});
+  }, [introCompleted]);
 
   //wait for user authentication
   useEffect(() => {
