@@ -18,6 +18,10 @@ const SPENDING_CATEGORIES = [
   "TRAVEL",
 ];
 
+// Goals with priority >= this sentinel are "above STS" — they reduce safe-to-spend directly.
+// Goals below the sentinel are funded only from whatever STS remains after the above-STS goals.
+const STS_ABOVE_SENTINEL = 1000;
+
 // persist updated amountSaved for each budget item
 const updateBudgetItems = async (items: any[]) => {
   for (let i = 0; i < items.length; i++) {
@@ -178,11 +182,15 @@ export const calculateSafeToSpend = async (userId: any) => {
   }
   returnValues.spendingFloor = remainingDesiredMonthlySpend;
 
-  // build list of items that need a contribution this month and their per-month amounts
-  let budgetItemsTotal = 0;
-  let budgetItemsToUpdate = [];
+  // build separate lists for above-STS and below-STS goals needing a contribution this month
+  // above-STS goals (priority >= sentinel) reduce STS directly
+  // below-STS goals are only funded from whatever STS remains afterward
+  let aboveStsTotal = 0;
+  let belowStsTotal = 0;
+  let aboveStsToUpdate: any[] = [];
+  let belowStsToUpdate: any[] = [];
+
   for (let i = 0; i < budgetItems.length; i++) {
-    // skip non-recurring items already fully saved
     if (
       !budgetItems[i].isReccuring &&
       budgetItems[i].amountSaved.toNumber() >= budgetItems[i].amount.toNumber()
@@ -190,7 +198,6 @@ export const calculateSafeToSpend = async (userId: any) => {
       continue;
     }
     const item = budgetItems[i];
-    // skip items already contributed to this month
     if (
       item.lastPaymentDate &&
       item.lastPaymentDate.getMonth() === now.getMonth() &&
@@ -206,11 +213,9 @@ export const calculateSafeToSpend = async (userId: any) => {
     );
     const amountPerMonth = item.isReccuring
       ? item.amount.toNumber()
-      : (item.amount.toNumber() - item.amountSaved.toNumber()) /
-        monthsRemaining;
+      : (item.amount.toNumber() - item.amountSaved.toNumber()) / monthsRemaining;
 
-    budgetItemsTotal += amountPerMonth;
-    budgetItemsToUpdate.push({
+    const entry = {
       id: item.id,
       newAmountSaved: item.isReccuring
         ? item.amountSaved
@@ -220,8 +225,20 @@ export const calculateSafeToSpend = async (userId: any) => {
       amount: item.amount,
       name: item.name,
       isReccuring: item.isReccuring,
-    });
+    };
+
+    if (item.priority >= STS_ABOVE_SENTINEL) {
+      aboveStsTotal += amountPerMonth;
+      aboveStsToUpdate.push(entry);
+    } else {
+      belowStsTotal += amountPerMonth;
+      belowStsToUpdate.push(entry);
+    }
   }
+
+  // STS is computed using only above-STS goals; below-STS goals are then funded from remaining STS
+  const budgetItemsTotal = aboveStsTotal;
+  const budgetItemsToUpdate = aboveStsToUpdate;
 
   // happy path — everything is fully funded
   if (

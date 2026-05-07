@@ -720,7 +720,11 @@ export default function Savings() {
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderedIds: orderedGoalIds, stsPosition: newStsPos }),
-    }).catch(() => {/* silent */});
+    })
+      .then(() => fetch(`${API}/safe-to-spend`, { credentials: "include" }))
+      .then((r) => r.json())
+      .then((d) => { if (d.safeToSpend) setStsData(d.safeToSpend); })
+      .catch(() => {/* silent */});
   }
 
   function closeAddPanel() {
