@@ -68,6 +68,7 @@ export const calculateSafeToSpend = async (userId: any) => {
     checkingBalance: 0,
     billsTotal: 0,
     scheduledSavings: 0,
+    committedGoals: 0,
     spendingFloor: 0,
   };
 
@@ -236,9 +237,14 @@ export const calculateSafeToSpend = async (userId: any) => {
     }
   }
 
-  // STS is computed using only above-STS goals; below-STS goals are then funded from remaining STS
-  const budgetItemsTotal = aboveStsTotal;
-  const budgetItemsToUpdate = aboveStsToUpdate;
+  // If the user has never explicitly positioned goals relative to STS (no sentinel priorities),
+  // treat all goals as above STS to preserve the original behavior.
+  // Once any goal has priority >= sentinel, the split is intentional and we honor it.
+  const hasExplicitPositioning = budgetItems.some((g) => g.priority >= STS_ABOVE_SENTINEL);
+  const budgetItemsTotal = hasExplicitPositioning ? aboveStsTotal : aboveStsTotal + belowStsTotal;
+  const budgetItemsToUpdate = hasExplicitPositioning
+    ? aboveStsToUpdate
+    : [...aboveStsToUpdate, ...belowStsToUpdate];
 
   // happy path — everything is fully funded
   if (
@@ -252,6 +258,7 @@ export const calculateSafeToSpend = async (userId: any) => {
       0,
     );
     returnValues.scheduledSavings = budgetItemsTotal;
+    returnValues.committedGoals = hasExplicitPositioning ? aboveStsTotal : budgetItemsTotal;
     returnValues.spendingFloor = 0;
     returnValues.ignoredBudgetItems = [];
     returnValues.acceptedBudgetItems = budgetItemsToUpdate;
@@ -446,6 +453,7 @@ export const calculateSafeToSpend = async (userId: any) => {
         : item.newAmountSaved.toNumber() - item.amountSaved.toNumber();
       return sum + contribution;
     }, 0);
+    returnValues.committedGoals = hasExplicitPositioning ? aboveStsTotal : returnValues.scheduledSavings;
     if (newSafeToSpend === 0) {
       await availableAfterCalculation();
       return returnValues;

@@ -4,6 +4,7 @@ type Breakdown = {
   checkingBalance: number;
   billsTotal: number;
   scheduledSavings: number;
+  committedGoals: number;
   safeToSpend: number;
 };
 
@@ -18,17 +19,22 @@ function fmt(n: number) {
 
 function Row({
   label,
+  sublabel,
   amount,
   sign,
 }: {
   label: string;
+  sublabel?: string;
   amount: number;
   sign: "+" | "-";
 }) {
   const positive = sign === "+";
   return (
     <div className="flex items-center justify-between py-4 border-b border-white/6 last:border-0">
-      <p className="text-[15px] text-white/70">{label}</p>
+      <div>
+        <p className="text-[15px] text-white/70">{label}</p>
+        {sublabel && <p className="text-[11px] text-white/30 mt-0.5">{sublabel}</p>}
+      </div>
       <p className={`text-[15px] font-semibold tabular-nums ${positive ? "text-[#3ecf8e]" : "text-white/80"}`}>
         {sign}${fmt(amount)}
       </p>
@@ -37,11 +43,13 @@ function Row({
 }
 
 export default function InfoPopup({ props, breakdown }: InfoPopupProps) {
-  // whatever the STS didn't account for with bills + savings is the actual minimum desired spend - already spent
   const impliedBuffer = Math.round(
     (breakdown.checkingBalance - breakdown.billsTotal - breakdown.scheduledSavings - breakdown.safeToSpend)
     * 100
   ) / 100;
+
+  // uncommitted savings = scheduled savings not tied to a priority goal
+  const uncommittedSavings = Math.max(0, breakdown.scheduledSavings - breakdown.committedGoals);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center px-4">
@@ -77,7 +85,25 @@ export default function InfoPopup({ props, breakdown }: InfoPopupProps) {
         <div className="mb-5">
           <Row label="Current Balance" amount={breakdown.checkingBalance} sign="+" />
           <Row label="Overdue & Upcoming Bills" amount={breakdown.billsTotal} sign="-" />
-          <Row label="Scheduled Savings" amount={breakdown.scheduledSavings} sign="-" />
+          {breakdown.committedGoals > 0 && (
+            <Row
+              label="Priority Goals"
+              sublabel="savings goals set above your STS line"
+              amount={breakdown.committedGoals}
+              sign="-"
+            />
+          )}
+          {uncommittedSavings > 0 && (
+            <Row
+              label="Scheduled Savings"
+              sublabel="remaining goals below your STS line"
+              amount={uncommittedSavings}
+              sign="-"
+            />
+          )}
+          {breakdown.committedGoals === 0 && breakdown.scheduledSavings > 0 && (
+            <Row label="Scheduled Savings" amount={breakdown.scheduledSavings} sign="-" />
+          )}
           {impliedBuffer > 0 && (
             <Row label="Monthly Buffer" amount={impliedBuffer} sign="-" />
           )}

@@ -55,6 +55,7 @@ router.post("/api/create-link-token", linkTokenLimiter, async (req, res) => {
       products: [Products.Transactions],
       country_codes: [CountryCode.Ca],
       language: "en",
+      webhook: process.env.PLAID_WEBHOOK_URL,
     });
 
     return res.json(response.data);
@@ -189,14 +190,19 @@ function buildTransactionData(transaction: any) {
     // pending=true means the transaction hasn't settled yet
     transactionStatus: transaction.pending ? "pending" : "posted",
     // detailed is a subcategory of primary, e.g. FOOD_AND_DRINK_FAST_FOOD
-    transactionCategory: transaction.personal_finance_category?.detailed ?? null,
+    transactionCategory:
+      transaction.personal_finance_category?.detailed ?? null,
     transactionTime,
     transactionLocation,
   };
 }
 
 // pages through Plaid's transaction sync cursor and writes added, modified, and removed transactions to the DB
-export async function setPlaidTransactions(accessToken: string, userId: string, itemId: string) {
+export async function setPlaidTransactions(
+  accessToken: string,
+  userId: string,
+  itemId: string,
+) {
   const plaidUser = await prisma.plaidUser.findUnique({
     where: { plaidItemId: itemId },
   });

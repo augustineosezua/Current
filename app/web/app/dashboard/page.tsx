@@ -110,6 +110,7 @@ interface SafeToSpend {
   checkingBalance?: number;
   billsTotal?: number;
   scheduledSavings?: number;
+  committedGoals?: number;
   spendingFloor?: number;
 }
 
@@ -605,6 +606,7 @@ export default function Dashboard() {
               checkingBalance: saveToSpend.checkingBalance ?? 0,
               billsTotal: saveToSpend.billsTotal ?? 0,
               scheduledSavings: saveToSpend.scheduledSavings ?? 0,
+              committedGoals: saveToSpend.committedGoals ?? 0,
               safeToSpend: saveToSpend.safeToSpend,
             }}
           />

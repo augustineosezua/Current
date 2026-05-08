@@ -61,6 +61,7 @@ interface Reconciliation {
 interface StsData {
   safeToSpend: number;
   scheduledSavings: number;
+  committedGoals: number;
   checkingBalance: number;
   billsTotal: number;
 }
@@ -389,11 +390,16 @@ export default function Savings() {
         .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
       setGoals(allGoals);
 
-      // derive STS position from priority sentinel — goals >= STS_ABOVE_SENTINEL are above STS
+      // derive STS position from priority sentinel
+      // if no goals have been explicitly positioned (all default priority < sentinel),
+      // put STS at the bottom so all goals are above it — matching the original behavior
       const incompleteItems = allGoals.filter(
         (g) => !g.isCompleted && Number(g.amountSaved) < Number(g.amount),
       );
-      const aboveStsCount = incompleteItems.filter((g) => g.priority >= STS_ABOVE_SENTINEL).length;
+      const hasExplicitPositioning = incompleteItems.some((g) => g.priority >= STS_ABOVE_SENTINEL);
+      const aboveStsCount = hasExplicitPositioning
+        ? incompleteItems.filter((g) => g.priority >= STS_ABOVE_SENTINEL).length
+        : incompleteItems.length;
       setStsPosition(aboveStsCount);
 
       if (reconciliationRes.ok) {
@@ -715,16 +721,25 @@ export default function Savings() {
       return [...reorderedIncomplete, ...completed];
     });
 
-    fetch(`${API}/budget-items/reorder`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderedIds: orderedGoalIds, stsPosition: newStsPos }),
-    })
-      .then(() => fetch(`${API}/safe-to-spend`, { credentials: "include" }))
-      .then((r) => r.json())
-      .then((d) => { if (d.safeToSpend) setStsData(d.safeToSpend); })
-      .catch(() => {/* silent */});
+    (async () => {
+      try {
+        const reorderRes = await fetch(`${API}/budget-items/reorder`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderedIds: orderedGoalIds, stsPosition: newStsPos }),
+        });
+        if (!reorderRes.ok) {
+          toast.error("Failed to save goal order.");
+          return;
+        }
+        const stsRes = await fetch(`${API}/safe-to-spend`, { credentials: "include" });
+        if (stsRes.ok) {
+          const d = await stsRes.json();
+          if (d.safeToSpend) setStsData(d.safeToSpend);
+        }
+      } catch {/* network error — optimistic UI stays */}
+    })();
   }
 
   function closeAddPanel() {
