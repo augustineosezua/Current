@@ -444,15 +444,21 @@ export const calculateSafeToSpend = async (userId: any) => {
     returnValues.ignoredBudgetItems = ignoredBudgetItems;
     returnValues.acceptedBudgetItems = updatedBudgetItems;
     returnValues.pendingBudgetItemUpdates = updatedBudgetItems;
-    returnValues.safeToSpend = newSafeToSpend;
-    returnValues.scheduledSavings = updatedBudgetItems.reduce((sum: number, item: any) => {
-      const contribution = item.isReccuring
-        ? item.amount.toNumber()
-        : item.newAmountSaved.toNumber() - item.amountSaved.toNumber();
-      return sum + contribution;
-    }, 0);
+    // Above-STS goals reduce STS like bills: deduct the full committed amount and allow STS to hit 0.
+    const effectiveSts = hasExplicitPositioning
+      ? Math.max(remainingBalance - aboveStsTotal, 0)
+      : newSafeToSpend;
+    returnValues.safeToSpend = effectiveSts;
+    returnValues.scheduledSavings = hasExplicitPositioning
+      ? aboveStsTotal
+      : updatedBudgetItems.reduce((sum: number, item: any) => {
+          const contribution = item.isReccuring
+            ? item.amount.toNumber()
+            : item.newAmountSaved.toNumber() - item.amountSaved.toNumber();
+          return sum + contribution;
+        }, 0);
     returnValues.committedGoals = hasExplicitPositioning ? aboveStsTotal : returnValues.scheduledSavings;
-    if (newSafeToSpend === 0) {
+    if (effectiveSts === 0) {
       await availableAfterCalculation();
       return returnValues;
     } else {

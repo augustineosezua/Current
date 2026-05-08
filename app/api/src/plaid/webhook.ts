@@ -2,7 +2,7 @@ import express from "express";
 import crypto from "crypto";
 import { plaidClient } from "../lib/plaid";
 import { prisma } from "../lib/prisma";
-import { setPlaidTransactions } from "./new-user";
+import { syncPlaidItem } from "./new-user";
 
 const router = express.Router();
 
@@ -94,24 +94,36 @@ router.post("/api/plaid/webhook", express.raw({ type: "application/json" }), asy
   // respond immediately — Plaid retries if we take longer than 10s
   res.status(200).json({ received: true });
 
-  handleWebhookAsync(webhook_type, webhook_code, item_id).catch((err) => {
+  handleWebhookAsync(webhook_type, webhook_code, item_id, body).catch((err) => {
     console.error(`Webhook handler error [${webhook_type}/${webhook_code}] itemId=${item_id}:`, err);
   });
 });
 
-async function handleWebhookAsync(webhookType: string, webhookCode: string, itemId: string) {
+async function handleWebhookAsync(
+  webhookType: string,
+  webhookCode: string,
+  itemId: string,
+  payload: Record<string, unknown>,
+) {
   if (webhookType === "TRANSACTIONS") {
     const syncCodes = ["SYNC_UPDATES_AVAILABLE", "INITIAL_UPDATE", "HISTORICAL_UPDATE", "DEFAULT_UPDATE"];
     if (!syncCodes.includes(webhookCode)) return;
 
-    const plaidUser = await prisma.plaidUser.findUnique({ where: { plaidItemId: itemId } });
-    if (!plaidUser) {
-      console.warn(`Webhook: no plaidUser found for itemId=${itemId}`);
-      return;
+    // SYNC_UPDATES_AVAILABLE carries flags for the initial 30-day window and full history
+    if (webhookCode === "SYNC_UPDATES_AVAILABLE") {
+      const { initial_update_complete, historical_update_complete } = payload as {
+        initial_update_complete?: boolean;
+        historical_update_complete?: boolean;
+      };
+      console.log(
+        `TRANSACTIONS/SYNC_UPDATES_AVAILABLE itemId=${itemId}` +
+        ` initial_complete=${initial_update_complete ?? "n/a"}` +
+        ` historical_complete=${historical_update_complete ?? "n/a"}`,
+      );
     }
 
-    // setPlaidTransactions decrypts the token internally
-    await setPlaidTransactions(plaidUser.plaidAccessToken, plaidUser.userId, itemId);
+    // refresh accounts then sync transactions (accounts first to satisfy FK constraints)
+    await syncPlaidItem(itemId);
     return;
   }
 

@@ -9,7 +9,8 @@
       "Bash(Format-List)",
       "Bash(dir \"C:\\\\Users\\\\augustine\\\\Desktop\\\\projects\\\\fintech\\\\Current\\\\app\\\\web\\\\public\")",
       "Bash(node_modules/.bin/tsx --version)",
-      "Bash(node_modules/.bin/tsx src/server.ts --dry-run)"
+      "Bash(node_modules/.bin/tsx src/server.ts --dry-run)",
+      "Bash(xargs ls -la)"
     ]
   }
 }

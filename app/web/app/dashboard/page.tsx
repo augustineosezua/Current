@@ -43,6 +43,7 @@ import {
   Ticket,
   TrainFront,
   Utensils,
+  RefreshCw,
   Wifi,
   Wine,
   Wrench,
@@ -461,6 +462,7 @@ export default function Dashboard() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
   const [showInfoPopup, setShowInfoPopup] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // useEffect never runs on the server, so authResolved stays false during SSR
   // preventing any flash of content before the client knows the session state
@@ -475,6 +477,22 @@ export default function Dashboard() {
 
   if (!authResolved) return <LoadingScreen />;
   if (!session) return null;
+
+  async function refreshData() {
+    if (syncing || !session) return;
+    setSyncing(true);
+    try {
+      const res = await fetch(`${API}/sync`, { method: "POST", credentials: "include" });
+      if (!res.ok) throw new Error();
+      toast.dismiss();
+      await getUserData();
+      toast.success("Accounts and transactions synced.");
+    } catch {
+      toast.error("Sync failed. Try again.");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function getUserData() {
     if (!session) {
@@ -618,14 +636,25 @@ export default function Dashboard() {
       {/* page content */}
       <main className="px-10 py-9 mx-auto w-full max-w-7xl">
         {/* greeting */}
-        <div className="mb-6">
-          <p className="text-white/50 text-sm font-semibold">
-            {timeGreeting()}
-            {firstName ? `, ${firstName}` : ""}
-          </p>
-          <p className="text-[18px] font-semibold tracking-[-0.3px] text-white/70 mt-0.5">
-            {todayStr}
-          </p>
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <p className="text-white/50 text-sm font-semibold">
+              {timeGreeting()}
+              {firstName ? `, ${firstName}` : ""}
+            </p>
+            <p className="text-[18px] font-semibold tracking-[-0.3px] text-white/70 mt-0.5">
+              {todayStr}
+            </p>
+          </div>
+          <button
+            onClick={refreshData}
+            disabled={loading || syncing}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/4 text-white/50 text-[13px] font-semibold hover:bg-white/7 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Sync accounts and transactions from Plaid"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing…" : "Sync"}
+          </button>
         </div>
 
         {/* hero row: safe-to-spend (2/3) + featured goal (1/3) */}

@@ -7,6 +7,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Bike,
+  RefreshCw,
   Car,
   Circle,
   CircleDollarSign,
@@ -52,6 +53,7 @@ import Link from "next/link";
 import AppHeader from "../components/app-header";
 import ErrorDashboard from "../dashboard/error-dashboard";
 import LoadingScreen from "../components/loading-screen";
+import { toast } from "sonner";
 
 type LoadingState = "loading" | "loaded" | "error";
 
@@ -352,6 +354,8 @@ export default function Transactions() {
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  const [syncing, setSyncing] = useState(false);
+
   const [search, setSearch] = useState("");
   const [selectedAccount, setSelectedAccount] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -390,6 +394,23 @@ export default function Transactions() {
   if (!session) {
     router.push("/login"); // in case the redirect in useEffect didn't catch it for some reason
     return null;
+  }
+
+  async function refreshData() {
+    if (syncing || !session) return;
+    setSyncing(true);
+    try {
+      const res = await fetch(`${API}/sync`, { method: "POST", credentials: "include" });
+      if (!res.ok) throw new Error();
+      setTransactions([]);
+      setTotal(0);
+      await loadData();
+      toast.success("Transactions synced.");
+    } catch {
+      toast.error("Sync failed. Try again.");
+    } finally {
+      setSyncing(false);
+    }
   }
 
   async function loadData() {
@@ -494,22 +515,33 @@ export default function Transactions() {
       {/* page content */}
       <main className="px-10 py-9 mx-auto w-full max-w-5xl">
         {/* heading */}
-        <div className="mb-6">
-          <h1 className="text-[28px] font-extrabold tracking-[-0.5px]">
-            Transactions
-          </h1>
-          {!loading && (
-            <p className="text-white/40 text-sm mt-1">
-              {filtered.length.toLocaleString()} transaction
-              {filtered.length !== 1 ? "s" : ""}
-              {filtered.length !== transactions.length && (
-                <span className="text-white/25">
-                  {" "}
-                  of {transactions.length.toLocaleString()}
-                </span>
-              )}
-            </p>
-          )}
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-[28px] font-extrabold tracking-[-0.5px]">
+              Transactions
+            </h1>
+            {!loading && (
+              <p className="text-white/40 text-sm mt-1">
+                {filtered.length.toLocaleString()} transaction
+                {filtered.length !== 1 ? "s" : ""}
+                {filtered.length !== transactions.length && (
+                  <span className="text-white/25">
+                    {" "}
+                    of {transactions.length.toLocaleString()}
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={refreshData}
+            disabled={loading || syncing}
+            className="mt-1 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/4 text-white/50 text-[13px] font-semibold hover:bg-white/7 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Sync accounts and transactions from Plaid"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing…" : "Sync"}
+          </button>
         </div>
 
         {/* filter bar */}

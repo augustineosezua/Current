@@ -27,6 +27,15 @@ const exchangeLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// 3 manual syncs per user per 5 minutes
+const syncLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 3,
+  keyGenerator: (req) => (req as any).userId ?? ipKeyGenerator(req.ip ?? ""),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // returns the authenticated userId or sends 401 and returns null
 async function requireAuth(
   req: express.Request,
@@ -110,7 +119,7 @@ router.post("/api/exchange-public-token", exchangeLimiter, async (req, res) => {
 });
 
 // fetches account data from Plaid using a raw access token
-async function getBankAccounts(accessToken: string) {
+export async function getBankAccounts(accessToken: string) {
   const response = await plaidClient.accountsGet({
     access_token: accessToken,
   });
@@ -119,7 +128,7 @@ async function getBankAccounts(accessToken: string) {
 }
 
 // upserts bank accounts from Plaid into the DB
-async function setBankAccounts(userId: string, itemId: string, data: any) {
+export async function setBankAccounts(userId: string, itemId: string, data: any) {
   const plaidUser = await prisma.plaidUser.findUnique({
     where: { plaidItemId: itemId },
   });
@@ -284,5 +293,48 @@ export async function setPlaidTransactions(
     });
   }
 }
+
+// refreshes accounts and syncs transactions for a single Plaid item.
+// used by webhooks and the manual /api/sync endpoint.
+export async function syncPlaidItem(plaidItemId: string) {
+  const plaidUser = await prisma.plaidUser.findUnique({ where: { plaidItemId } });
+  if (!plaidUser) {
+    console.warn(`syncPlaidItem: no plaidUser found for itemId=${plaidItemId}`);
+    return;
+  }
+
+  const rawToken = (() => {
+    try {
+      return decrypt(plaidUser.plaidAccessToken);
+    } catch {
+      return plaidUser.plaidAccessToken;
+    }
+  })();
+
+  // refresh accounts before transactions — avoids FK violations if new accounts were added
+  const accountData = await getBankAccounts(rawToken);
+  await setBankAccounts(plaidUser.userId, plaidItemId, accountData);
+
+  await setPlaidTransactions(rawToken, plaidUser.userId, plaidItemId);
+}
+
+// re-fetches accounts and transactions from Plaid for all of the user's linked items
+router.post("/api/sync", syncLimiter, async (req, res) => {
+  try {
+    const userId = await requireAuth(req, res);
+    if (!userId) return;
+
+    const plaidUsers = await prisma.plaidUser.findMany({ where: { userId } });
+    if (plaidUsers.length === 0) {
+      return res.status(404).json({ error: "No linked accounts found" });
+    }
+
+    await Promise.all(plaidUsers.map((p) => syncPlaidItem(p.plaidItemId)));
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Error syncing Plaid data:", error);
+    return res.status(500).json({ error: "Error syncing data" });
+  }
+});
 
 export default router;
