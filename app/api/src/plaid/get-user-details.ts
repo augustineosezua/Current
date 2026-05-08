@@ -81,11 +81,13 @@ router.get("/api/user-details", async (req, res) => {
       },
     });
 
-    const bankAccounts = await prisma.bankAccounts.findMany({
-      where: {
-        userId: userId,
-      },
+    const rawBankAccounts = await prisma.bankAccounts.findMany({
+      where: { userId },
     });
+    const bankAccounts = rawBankAccounts.map((acc) => ({
+      ...acc,
+      availableBalance: acc.availableBalance.toNumber() || acc.currentBalance.toNumber(),
+    }));
 
     let userSettings = userWithSettings?.userSettings ?? null;
 
@@ -140,13 +142,15 @@ router.get("/api/accounts", async (req, res) => {
     const userId = await requireAuth(req, res);
     if (!userId) return;
 
-    const bankAccounts = await prisma.bankAccounts.findMany({
-      where: {
-        userId: userId,
-      },
+    const rawAccounts = await prisma.bankAccounts.findMany({
+      where: { userId },
     });
+    const bankAccounts = rawAccounts.map((acc) => ({
+      ...acc,
+      availableBalance: acc.availableBalance.toNumber() || acc.currentBalance.toNumber(),
+    }));
 
-    return res.json({ bankAccounts: bankAccounts, status: 200 });
+    return res.json({ bankAccounts, status: 200 });
   } catch (error) {
     console.error("Error fetching accounts:", error);
     return res.status(500).json({ error: "Error fetching accounts" });
@@ -277,7 +281,7 @@ router.get("/api/accounts/summary", async (req, res) => {
         accountSubType: acc.accountSubType,
         institutionName: acc.institutionName,
         isSavingsAccount: acc.isSavingsAccount,
-        availableBalance: acc.availableBalance,
+        availableBalance: acc.availableBalance.toNumber() || acc.currentBalance.toNumber(),
         currentBalance: acc.currentBalance,
         linkedAt: acc.linkedAt,
         monthSpent: Math.round(monthSpent * 100) / 100,

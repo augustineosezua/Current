@@ -2,13 +2,15 @@ import { prisma } from "./prisma";
 
 // compares what's actually in savings accounts against what goals collectively claim is saved
 export const calculateSavingsReconciliation = async (userId: string) => {
-  // sum available balances across every account the user has flagged as a savings account
-  const savingsAggregate = await prisma.bankAccounts.aggregate({
-    _sum: { availableBalance: true },
+  // sum balances across savings accounts, falling back to currentBalance when availableBalance is 0
+  const savingsAccounts = await prisma.bankAccounts.findMany({
     where: { userId, isSavingsAccount: true },
+    select: { availableBalance: true, currentBalance: true },
   });
-  const savingsAccountTotal =
-    savingsAggregate._sum.availableBalance?.toNumber() ?? 0;
+  const savingsAccountTotal = savingsAccounts.reduce((sum, acc) => {
+    const bal = acc.availableBalance.toNumber() || acc.currentBalance.toNumber();
+    return sum + bal;
+  }, 0);
 
   // fetch every non-deleted goal — completed goals stay in the total until the user marks them spent
   const goals = await prisma.budgetItem.findMany({

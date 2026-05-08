@@ -7,7 +7,9 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\augustine\\\\Desktop\\\\projects\\\\fintech\\\\Current\" -Recurse -Depth 2)",
       "Bash(Select-Object FullName, PSIsContainer)",
       "Bash(Format-List)",
-      "Bash(dir \"C:\\\\Users\\\\augustine\\\\Desktop\\\\projects\\\\fintech\\\\Current\\\\app\\\\web\\\\public\")"
+      "Bash(dir \"C:\\\\Users\\\\augustine\\\\Desktop\\\\projects\\\\fintech\\\\Current\\\\app\\\\web\\\\public\")",
+      "Bash(node_modules/.bin/tsx --version)",
+      "Bash(node_modules/.bin/tsx src/server.ts --dry-run)"
     ]
   }
 }

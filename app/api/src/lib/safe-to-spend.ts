@@ -72,32 +72,30 @@ export const calculateSafeToSpend = async (userId: any) => {
     spendingFloor: 0,
   };
 
-  // sum of non-savings, non-credit checking balances
-  const availableBalance = await prisma.bankAccounts.aggregate({
-    _sum: {
-      availableBalance: true,
-    },
-    where: {
-      userId: userId,
-      isSavingsAccount: false,
-      accountType: {
-        not: "credit",
-      },
-    },
+  // sum of non-savings, non-credit checking balances, falling back to currentBalance when available is 0
+  const checkingAccounts = await prisma.bankAccounts.findMany({
+    where: { userId, isSavingsAccount: false, accountType: { not: "credit" } },
+    select: { availableBalance: true, currentBalance: true },
   });
 
-  returnValues.checkingBalance = availableBalance._sum.availableBalance?.toNumber() ?? 0;
-
-  // no linked accounts found — can't calculate
-  if (
-    availableBalance._sum.availableBalance === null ||
-    availableBalance._sum.availableBalance === undefined
-  ) {
+  if (checkingAccounts.length === 0) {
     returnValues.error = new Error(
       "Error Calculating Safe To Spend: No linked accounts found",
     );
     return returnValues;
   }
+
+  const checkingTotal = checkingAccounts.reduce((sum, acc) => {
+    const bal = acc.availableBalance.toNumber() || acc.currentBalance.toNumber();
+    return sum + bal;
+  }, 0);
+
+  // wrap in a shape the rest of the function can reference the same way
+  const availableBalance = {
+    _sum: { availableBalance: { toNumber: () => checkingTotal } },
+  };
+
+  returnValues.checkingBalance = checkingTotal;
 
   // date range for the current month
   const now = new Date();

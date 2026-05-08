@@ -139,7 +139,7 @@ async function setBankAccounts(userId: string, itemId: string, data: any) {
       update: {
         accountName: account.name || "",
         currentBalance: account.balances.current || 0,
-        availableBalance: account.balances.available || 0,
+        availableBalance: account.balances.available || account.balances.current || 0,
       },
       create: {
         userId: userId,
@@ -151,7 +151,7 @@ async function setBankAccounts(userId: string, itemId: string, data: any) {
         institutionName: item.institution_name || "",
         institutionId: item.institution_id || "",
         currentBalance: account.balances.current || 0,
-        availableBalance: account.balances.available || 0,
+        availableBalance: account.balances.available || account.balances.current || 0,
         currency: account.balances.iso_currency_code || "",
       },
     });
