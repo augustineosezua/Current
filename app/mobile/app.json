@@ -8,7 +8,9 @@
     "scheme": "current",
     "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.chickenlabs.current",
+      "appleTeamId": "2LYTKB74QB"
     },
     "android": {
       "adaptiveIcon": {
