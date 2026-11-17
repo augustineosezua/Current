@@ -21,6 +21,9 @@ function TabButton({
   icon,
   iconSelected,
   ref,
+  // TabTrigger injects { flexDirection: 'row', justifyContent: 'space-between' }, which would override
+  // className and split icon and label to opposite edges, so drop it
+  style: _triggerStyle,
   ...props
 }: TabTriggerSlotProps & { label: string; icon: SFSymbol; iconSelected: SFSymbol }) {
   const [ink, muted] = useCSSVariable(['--color-ink', '--color-muted']) as string[];
