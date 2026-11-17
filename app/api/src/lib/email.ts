@@ -154,7 +154,7 @@ function currentEmailHtml({
             <tr>
               <td style="padding:16px 32px 22px;border-top:1px solid rgba(255,255,255,0.07);background:#0C1018;">
                 <p style="margin:0;color:rgba(255,255,255,0.22);font-size:12px;line-height:1.5;font-weight:500;">
-                  Current &middot; Bank-grade encryption
+                  Current &middot; Budgeting for real life
                 </p>
               </td>
             </tr>
