@@ -10,6 +10,7 @@ import type {
   Frequency,
   Goal,
   Income,
+  ReminderSettings,
   TermPlan,
   Transaction,
 } from '@current/core';
@@ -42,8 +43,18 @@ export interface Settings {
   minimumMonthlySpend: Cents;
   // true once the first-run setup has been finished
   onboarded: boolean;
+  // which local notifications are switched on
+  reminders: ReminderSettings;
+  // ISO time of the last CSV export or dismissed backup prompt
+  backupNudgedAt: string | null;
 }
-export const DEFAULT_SETTINGS: Settings = { budgetPeriod: null, minimumMonthlySpend: 0, onboarded: false };
+export const DEFAULT_SETTINGS: Settings = {
+  budgetPeriod: null,
+  minimumMonthlySpend: 0,
+  onboarded: false,
+  reminders: { bills: true, summary: true, checkIn: true },
+  backupNudgedAt: null,
+};
 export type SettingKey = keyof Settings;
 
 // settings rows (id = key, value = JSON) -> Settings, defaults for missing or unreadable keys

@@ -6,6 +6,8 @@
 // Money is INTEGER cents. Calendar dates are 'YYYY-MM-DD' (local), instants are ISO strings.
 // No foreign key constraints: synced rows can arrive in any order.
 
+import { DEFAULT_CATEGORIES } from '@current/core';
+
 export const TABLES = [
   'accounts',
   'categories',
@@ -26,6 +28,18 @@ const SYNC_COLUMNS = `
   deletedAt TEXT`;
 
 const FREQUENCIES = `('one_time','daily','weekly','biweekly','semimonthly','monthly','yearly')`;
+
+// quote a value for a SQL string literal
+function sqlText(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+// Defaults use fixed ids and an old fixed timestamp: two devices seed identical rows, and any later edit wins a sync.
+const SEED_TIME = '2026-01-01T00:00:00.000Z';
+const DEFAULT_CATEGORY_ROWS = DEFAULT_CATEGORIES.map(
+  (c) =>
+    `(${[c.id, SEED_TIME, SEED_TIME, c.name, c.emoji, c.color, c.kind].map(sqlText).join(', ')}, ${c.sortOrder})`,
+).join(',\n    ');
 
 // each entry upgrades the database by one version; never edit a shipped entry
 export const MIGRATIONS: readonly string[] = [
@@ -107,6 +121,11 @@ export const MIGRATIONS: readonly string[] = [
   // 1.1: a recurring bill's next occurrence remembers the bill that created it, so undoing a payment can remove it
   `
   ALTER TABLE bills ADD COLUMN previousBillId TEXT;
+  `,
+  // 1.2: the starting categories
+  `
+  INSERT OR IGNORE INTO categories (id, createdAt, updatedAt, name, emoji, color, kind, sortOrder) VALUES
+    ${DEFAULT_CATEGORY_ROWS};
   `,
 ];
 

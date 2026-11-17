@@ -5,13 +5,15 @@ import { useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { CategoryPicker } from '@/components/category-picker';
 import { DateField } from '@/components/date-field';
 import { AmountField, Button, Chips, Field, Sheet } from '@/components/form';
 import { useToast } from '@/components/toast';
 import { createBill, deleteBill, markBillPaid, markBillUnpaid, pickMainAccount, updateBill } from '@/db/ledger';
-import type { AccountRecord, BillRecord } from '@/db/records';
+import type { AccountRecord, BillRecord, CategoryRecord } from '@/db/records';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
+import { categoriesFor, suggestCategoryId } from '@/lib/categories';
 import { FREQUENCY_LABELS } from '@/lib/format';
 
 const REPEATS: readonly { value: Frequency; label: string }[] = (
@@ -21,16 +23,21 @@ const REPEATS: readonly { value: Frequency; label: string }[] = (
 interface FormData {
   bill: BillRecord | null;
   accounts: AccountRecord[];
+  categories: CategoryRecord[];
 }
 
-// the bill being edited and the accounts a payment can come from
+// the bill being edited, the accounts a payment can come from and the categories it can be filed under
 async function loadForm(db: SQLiteDatabase, id: string | undefined): Promise<FormData> {
-  const [bill, accounts] = await Promise.all([id ? repo.bills.get(db, id) : null, repo.accounts.list(db)]);
-  return { bill, accounts };
+  const [bill, accounts, categories] = await Promise.all([
+    id ? repo.bills.get(db, id) : null,
+    repo.accounts.list(db),
+    repo.categories.list(db),
+  ]);
+  return { bill, accounts, categories: categoriesFor(categories, 'out') };
 }
 
 // add or edit a bill; an existing unpaid bill can also be marked paid on a chosen date from a chosen account
-function BillForm({ bill, accounts }: FormData) {
+function BillForm({ bill, accounts, categories }: FormData) {
   const db = useSQLiteContext();
   const toast = useToast();
   const spendable = accounts.filter((a) => a.type !== 'savings');
@@ -40,7 +47,14 @@ function BillForm({ bill, accounts }: FormData) {
   const [frequency, setFrequency] = useState<Frequency>(bill?.frequency ?? (bill ? 'one_time' : 'monthly'));
   const [paidOn, setPaidOn] = useState(new Date());
   const [payFrom, setPayFrom] = useState<string | null>(bill?.accountId ?? pickMainAccount(accounts)?.id ?? null);
+  // the user's own pick; undefined until they choose, so the suggestion can follow the name
+  const [pickedCategory, setPickedCategory] = useState<string | null | undefined>(bill ? bill.categoryId : undefined);
   const [error, setError] = useState<string | null>(null);
+
+  // a pick wins; otherwise suggest from the name, falling back to "Rent & bills"
+  const fallback = categories.find((c) => c.id === 'default-home')?.id ?? null;
+  const chosen = pickedCategory === undefined ? (suggestCategoryId([], categories, name) ?? fallback) : pickedCategory;
+  const categoryId = categories.some((c) => c.id === chosen) ? chosen : null;
 
   const amount = toCents(amountText);
   const valid = name.trim().length > 0 && amount !== null && amount > 0 && dueDate !== null;
@@ -59,7 +73,7 @@ function BillForm({ bill, accounts }: FormData) {
   const save = () =>
     run(async () => {
       if (!valid) return;
-      const input = { name: name.trim(), amount, dueDate, frequency, accountId: bill?.accountId, categoryId: bill?.categoryId };
+      const input = { name: name.trim(), amount, dueDate, frequency, accountId: bill?.accountId, categoryId };
       if (bill) await updateBill(db, bill.id, input);
       else await createBill(db, input);
     });
@@ -84,6 +98,7 @@ function BillForm({ bill, accounts }: FormData) {
       <AmountField label="How much?" value={amountText} onChangeText={setAmountText} />
       <DateField label="Next due" value={dueDate} onChange={setDueDate} />
       <Chips label="Repeats" options={REPEATS} value={frequency} onChange={setFrequency} />
+      <CategoryPicker categories={categories} value={categoryId} onChange={setPickedCategory} />
       {error ? <Text className="font-sans-medium text-base text-ink">Couldn&apos;t save: {error}</Text> : null}
       <Button label="Save" onPress={save} disabled={!valid} />
 
@@ -117,5 +132,5 @@ export default function BillScreen() {
   const { data } = useLiveQuery(load, false);
 
   if (!data) return <Sheet title="">{null}</Sheet>;
-  return <BillForm bill={data.bill} accounts={data.accounts} />;
+  return <BillForm {...data} />;
 }

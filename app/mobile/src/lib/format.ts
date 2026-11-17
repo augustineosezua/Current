@@ -1,4 +1,4 @@
-import { daysBetween, type Frequency } from '@current/core';
+import { daysBetween, type BudgetPeriodKind, type Frequency } from '@current/core';
 
 const short = new Intl.DateTimeFormat('en-CA', { weekday: 'short', month: 'short', day: 'numeric' });
 const monthYear = new Intl.DateTimeFormat('en-CA', { month: 'long', year: 'numeric' });
@@ -21,6 +21,21 @@ export function dayLabel(date: Date, now = new Date()): string {
   if (ago === -1) return 'Tomorrow';
   return short.format(date);
 }
+
+// "Jan 2", for ranges and card lines
+const monthDay = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' });
+export function monthDayLabel(date: Date): string {
+  return monthDay.format(date);
+}
+
+// "Friday"
+const weekdayLong = new Intl.DateTimeFormat('en-CA', { weekday: 'long' });
+export function weekdayLabel(date: Date): string {
+  return weekdayLong.format(date);
+}
+
+// what one budget period is called in a sentence
+export const PERIOD_NOUNS: Record<BudgetPeriodKind, string> = { paycheque: 'paycheque', monthly: 'month', term: 'term' };
 
 // "today", "yesterday" or "9 days ago"
 export function daysAgoLabel(date: Date, now = new Date()): string {

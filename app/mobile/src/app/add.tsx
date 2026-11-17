@@ -5,12 +5,14 @@ import { useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 import { Text } from 'react-native';
 
+import { CategoryPicker } from '@/components/category-picker';
 import { DateField } from '@/components/date-field';
 import { AmountField, Button, Chips, Field, Sheet } from '@/components/form';
 import { addTransaction, deleteTransaction, editTransaction, pickMainAccount } from '@/db/ledger';
-import type { AccountRecord, TransactionRecord } from '@/db/records';
+import type { AccountRecord, CategoryRecord, TransactionRecord } from '@/db/records';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
+import { categoriesFor, suggestCategoryId } from '@/lib/categories';
 
 const DIRECTIONS = [
   { value: 'out', label: 'Spent' },
@@ -20,13 +22,20 @@ type Direction = (typeof DIRECTIONS)[number]['value'];
 
 interface FormData {
   accounts: AccountRecord[];
+  categories: CategoryRecord[];
+  // everything logged so far, for category suggestions
+  history: TransactionRecord[];
   transaction: TransactionRecord | null;
 }
 
-// accounts to choose from and, when editing, the transaction being changed
+// accounts and categories to choose from, past entries to suggest from and, when editing, the entry being changed
 async function loadForm(db: SQLiteDatabase, id: string | undefined): Promise<FormData> {
-  const [accounts, transaction] = await Promise.all([repo.accounts.list(db), id ? repo.transactions.get(db, id) : null]);
-  return { accounts, transaction };
+  const [accounts, categories, history] = await Promise.all([
+    repo.accounts.list(db),
+    repo.categories.list(db),
+    repo.transactions.list(db),
+  ]);
+  return { accounts, categories, history, transaction: history.find((t) => t.id === id) ?? null };
 }
 
 // amount as the user would type it, e.g. 450 -> "4.50"
@@ -35,7 +44,7 @@ function centsToText(cents: number): string {
 }
 
 // the form itself; initial values come from props so it needs no effects
-function TransactionForm({ accounts, transaction }: FormData) {
+function TransactionForm({ accounts, categories, history, transaction }: FormData) {
   const db = useSQLiteContext();
   const [direction, setDirection] = useState<Direction>(transaction && transaction.amount < 0 ? 'in' : 'out');
   const [amountText, setAmountText] = useState(transaction ? centsToText(transaction.amount) : '');
@@ -44,10 +53,20 @@ function TransactionForm({ accounts, transaction }: FormData) {
   const [accountId, setAccountId] = useState<string | null>(
     transaction ? (transaction.accountId ?? null) : (pickMainAccount(accounts)?.id ?? accounts[0]?.id ?? null),
   );
+  // the user's own pick; undefined until they choose, so the suggestion can follow what they type
+  const [pickedCategory, setPickedCategory] = useState<string | null | undefined>(
+    transaction ? transaction.categoryId : undefined,
+  );
   const [error, setError] = useState<string | null>(null);
 
   const cents = toCents(amountText);
   const valid = cents !== null && cents > 0;
+
+  // a pick wins; otherwise suggest from the name, and money in defaults to the first income category
+  const options = categoriesFor(categories, direction);
+  const suggested = suggestCategoryId(history, options, merchant) ?? (direction === 'in' ? (options[0]?.id ?? null) : null);
+  const chosen = pickedCategory === undefined ? suggested : pickedCategory;
+  const categoryId = options.some((c) => c.id === chosen) ? chosen : null;
 
   // write the transaction and its balance change together, then close
   const save = async () => {
@@ -57,6 +76,7 @@ function TransactionForm({ accounts, transaction }: FormData) {
       amount: direction === 'out' ? cents : -cents,
       date,
       merchantName: merchant.trim() || null,
+      categoryId,
     };
     try {
       if (transaction) await editTransaction(db, transaction.id, input);
@@ -89,6 +109,7 @@ function TransactionForm({ accounts, transaction }: FormData) {
         onChangeText={setMerchant}
         placeholder={direction === 'out' ? 'Tim Hortons' : 'Paycheque'}
       />
+      <CategoryPicker categories={options} value={categoryId} onChange={setPickedCategory} />
       <DateField label="When?" value={date} onChange={setDate} />
       {accounts.length > 1 ? (
         <Chips
@@ -113,5 +134,5 @@ export default function AddScreen() {
 
   if (error) return <Sheet title="Couldn't open this">{<Text className="font-sans text-base text-muted">{error.message}</Text>}</Sheet>;
   if (!data) return <Sheet title="">{null}</Sheet>;
-  return <TransactionForm accounts={data.accounts} transaction={data.transaction} />;
+  return <TransactionForm {...data} />;
 }

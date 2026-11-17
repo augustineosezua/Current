@@ -93,7 +93,7 @@ describe('settings', () => {
       { ...meta, id: 'minimumMonthlySpend', value: 'not json' },
       { ...meta, id: 'unknownKey', value: '1' },
     ];
-    expect(settingsFromRows(rows)).toEqual({ budgetPeriod: 'term', minimumMonthlySpend: 0, onboarded: false });
+    expect(settingsFromRows(rows)).toEqual({ ...DEFAULT_SETTINGS, budgetPeriod: 'term' });
     expect(settingsFromRows([])).toEqual(DEFAULT_SETTINGS);
   });
 });

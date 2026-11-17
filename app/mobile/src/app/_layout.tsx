@@ -11,6 +11,7 @@ import { SQLiteProvider } from 'expo-sqlite';
 import { useEffect } from 'react';
 import { useCSSVariable } from 'uniwind';
 
+import { ReminderSync } from '@/components/reminder-sync';
 import { ToastProvider } from '@/components/toast';
 import { migrateDbIfNeeded } from '@/db/migrate';
 
@@ -36,6 +37,7 @@ export default function RootLayout() {
 
   return (
     <SQLiteProvider databaseName="current.db" onInit={migrateDbIfNeeded}>
+      <ReminderSync />
       <ToastProvider>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: bg } }}>
           <Stack.Screen name="(tabs)" />
@@ -44,7 +46,14 @@ export default function RootLayout() {
           <Stack.Screen name="bill" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
           <Stack.Screen name="account" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
           <Stack.Screen name="check-in" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="income" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="term-plan" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="goal" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="category" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
           <Stack.Screen name="settings" />
+          <Stack.Screen name="categories" />
+          <Stack.Screen name="budget" />
+          <Stack.Screen name="reminders" />
           <Stack.Screen name="accounts" />
         </Stack>
       </ToastProvider>

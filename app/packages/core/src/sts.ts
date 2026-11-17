@@ -55,7 +55,10 @@ export interface StsResult {
   };
   billsCounted: Bill[];
   availableAfter: { amount: Cents; date: Date } | null;
-  daily: { perDay: Cents; daysLeft: number; periodEnd: Date };
+  // total is what the rest of the period can spend: Safe-to-Spend plus term money released before the period ends
+  daily: { perDay: Cents; daysLeft: number; periodEnd: Date; total: Cents };
+  // last day a bill can be due and still be counted
+  billsCutoff: Date;
   period: Period;
 }
 
@@ -178,7 +181,8 @@ export function calculateSafeToSpend(input: StsInput, now: Date): StsResult {
     goals: { funded: result.funded, ignored: result.ignored, fromSts: result.fromSts },
     billsCounted,
     availableAfter,
-    daily: { perDay: Math.floor(periodSts / daysLeft), daysLeft, periodEnd: period.end },
+    daily: { perDay: Math.floor(periodSts / daysLeft), daysLeft, periodEnd: period.end, total: periodSts },
+    billsCutoff,
     period,
   };
 }

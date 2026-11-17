@@ -9,6 +9,7 @@ import { withUniwind } from 'uniwind';
 import { DateField } from '@/components/date-field';
 import { AmountField, Button, Chips, Field } from '@/components/form';
 import { completeOnboarding, type BillInput } from '@/db/ledger';
+import { requestReminderPermission } from '@/lib/reminders';
 import { dayLabel, FREQUENCY_LABELS } from '@/lib/format';
 
 const StyledSafeAreaView = withUniwind(SafeAreaView);
@@ -66,6 +67,8 @@ export default function OnboardingScreen() {
         income: hasIncome ? { amount: pay, frequency: payFrequency, nextPaymentDate: payDate } : null,
         bills: draftBill ? [...bills, draftBill] : bills,
       });
+      // with a bill to remind about, this is the moment the notification prompt makes sense
+      if (draftBill || bills.length > 0) void requestReminderPermission().catch(() => {});
       router.replace('/');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

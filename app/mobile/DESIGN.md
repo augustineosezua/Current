@@ -35,7 +35,7 @@ All colour comes from tokens. Light and dark follow the system setting automatic
 
 Zero is lilac, not red. Running out is never shown as an alarm.
 
-**Category stickers** (1.2), the same in both modes, since emoji sit on them and no text needs contrast against them: `cat-peach` #FFD9C7, `cat-mint` #CDEFD9, `cat-sky` #CFE6FF, `cat-pink` #FFD6E8, `cat-lilac` #E3D9FF, `cat-butter` #FFF0A8, `cat-aqua` #C8F0EE, `cat-sand` #F1E3CC, `cat-sage` #DCE9C8, `cat-coral` #FFC9BF, `cat-lavender` #D9DCFF, `cat-stone` #E4DED6.
+**Category stickers** (1.2). A category stores one of these colour names; `src/lib/categories.ts` maps it to the class. An entry with no category gets a 🏷️ on `field`. The same in both modes, since emoji sit on them and no text needs contrast against them: `cat-peach` #FFD9C7, `cat-mint` #CDEFD9, `cat-sky` #CFE6FF, `cat-pink` #FFD6E8, `cat-lilac` #E3D9FF, `cat-butter` #FFF0A8, `cat-aqua` #C8F0EE, `cat-sand` #F1E3CC, `cat-sage` #DCE9C8, `cat-coral` #FFC9BF, `cat-lavender` #D9DCFF, `cat-stone` #E4DED6.
 
 ## Type
 
@@ -60,6 +60,9 @@ Zero is lilac, not red. Running out is never shown as an alarm.
 - `EmptyState`: a pile of 2 or 3 large stickers, a title and one line saying what to do next.
 - `Sheet`, `Field`, `AmountField`, `Chips`, `Button` (`components/form.tsx`): the pieces every form sheet is built from. `Button` is `primary` (ink-edge pill, one per sheet), `secondary` (flat `field` pill) or `plain` (text only: Skip, Delete).
 - `DateField`: a date row that opens a month calendar drawn in code.
+- `CategoryPicker`: wrapping chips with the category's emoji and name. The chosen chip takes the category's `cat-*` fill with an ink edge and `text-on-brand`, the one text colour that passes contrast on every sticker fill in both modes. Tapping the chosen chip clears it.
+- `PeriodSummary`: the card at the top of Activity. Total spent this budget period, one like-for-like line, then a row per category (small sticker, name, share, amount). No charts; those are Plus (2.8).
+- `BackButton`: the round chevron at the top of pushed screens.
 - `Toast` (`useToast`): the ink pill confirmation above the tab bar, with an optional Undo.
 - `TabBar`: a floating pill with three tabs (Home, Activity, Plan) and a separate coral **+** button to its right that opens the Log spending sheet. Settings opens from the gear on Home; bills, goals and term plans live under Plan.
 
@@ -83,6 +86,7 @@ Never joke about being short of money, never guilt ("you overspent again"), and 
 ## Limits
 
 - Safe-to-Spend stays the largest thing on Home.
+- The breakdown ("How it's calculated") and the monthly backup prompt on Home are flat `card` rows too, so nothing competes with the number.
 - A stale or failed number is shown plainly: a flat `card` row with plain text and one button ("Balance last checked 9 days ago", "Check now"). No sticker, tilt or mood colour on it.
 - Text meets WCAG AA in both modes. Check new token pairs before adding them.
 - Art is emoji, SF Symbols and shapes drawn in code only. No illustrations, mascots or paid assets.

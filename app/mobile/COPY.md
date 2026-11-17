@@ -15,6 +15,14 @@ Every piece of user-facing text in the mobile app, grouped by screen. To change 
 | H3 | Check now | Button in that warning card |
 | H4 | In your accounts | Row under the big number, left side (total balance on the right) |
 | H5 | Couldn't load your budget | Error title if data fails to load |
+| H6 | How it's calculated | Row that opens the breakdown |
+| H7 | In your accounts / Bills due by {date} / Term money for later weeks / Held back for goals / Safe to spend | Breakdown rows |
+| H8 | Term money freeing up by {date} | Breakdown row when term money releases before the period ends |
+| H9 | Over {N} days, until {weekday} {date} | Last breakdown row, with {amount}/day |
+| H10 | Savings accounts never count. Bills already paid are already out of your balance. | Note under the breakdown |
+| H11 | Back up now? | Monthly backup prompt title |
+| H12 | Your budget lives on this phone and is included in iCloud device backups. A CSV copy takes a few seconds. | Backup prompt text |
+| H13 | Export a copy / Not now | Backup prompt buttons |
 
 ## Safe-to-spend card (`src/components/sts-hero.tsx`)
 
@@ -46,6 +54,12 @@ Every piece of user-facing text in the mobile app, grouped by screen. To change 
 | A5 | Spending | Row title for spending with no "where" name |
 | A6 | Today / Yesterday / Tomorrow | Day group headings (from `src/lib/format.ts`, also used everywhere dates show) |
 | A7 | Couldn't load your activity | Error title |
+| A8 | This {paycheque / month / term} · {start} to {end} | Small heading on the summary card at the top (`src/components/period-summary.tsx`) |
+| A9 | {amount} spent | Big line on the summary card |
+| A10 | {N}% less than this point last {paycheque / month / term} | Comparison line (also "{N}% more than…" and "About the same as this point last…") |
+| A11 | Nothing spent yet this {paycheque / month / term}. | Summary card with no spending |
+| A12 | Uncategorized | Summary row for entries with no category |
+| A13 | Everything else | Summary row after the six biggest categories |
 
 ## Plan tab (`src/app/(tabs)/plan.tsx`)
 
@@ -63,7 +77,20 @@ Every piece of user-facing text in the mobile app, grouped by screen. To change 
 | P10 | Undo | Button in that toast (also used in the bill sheet toast) |
 | P11 | Goals | Section heading |
 | P12 | Nothing saved for yet | Goals empty state title |
-| P13 | A trip, a laptop, or just a cushion? Add it and we'll set a little aside every paycheque. | Goals empty state body |
+| P13 | A trip, a laptop, or just a cushion? Add it and we'll hold a little back every paycheque. | Goals empty state body |
+| P14 | Term money | Section heading |
+| P15 | Got a lump sum for the term? | Term money empty state title |
+| P16 | Add it and we'll spread it over the weeks it has to last, so it's still there in April. | Term money empty state body |
+| P17 | {amount} released so far, {amount}/week, lasts until {date} | Line on a term money card |
+| P18 | Ended {date} | Line on a term money card that has finished |
+| P19 | Add term money | Button under the term money cards |
+| P20 | One lot of term money at a time for now. | Shown instead of P19 when one is already running |
+| P21 | {saved} of {target} | Progress line on a goal |
+| P22 | {amount} held back this {paycheque / month / term} · by {date} | Detail line on a goal being funded (otherwise "By {date}") |
+| P23 | Fully saved | Detail line on a finished goal |
+| P24 | The goal at the top is funded first. | Note under the goals list (2+ goals) |
+| P25 | Add a goal | Button under the goals list |
+| P26 | Two goals at a time for now. | Shown instead of P25 with two unfinished goals |
 
 ## Log spending sheet, the + button (`src/app/add.tsx`)
 
@@ -85,6 +112,7 @@ Every piece of user-facing text in the mobile app, grouped by screen. To change 
 | L14 | Save | Main button (editing) |
 | L15 | Delete | Button under Save when editing |
 | L16 | Couldn't open this | Sheet title if the entry fails to load |
+| L17 | Category | Category picker label (chips are the user's categories; also on the bill sheet) |
 
 ## Onboarding, first launch (`src/app/onboarding.tsx`)
 
@@ -130,15 +158,123 @@ Every piece of user-facing text in the mobile app, grouped by screen. To change 
 | B12 | Mark unpaid | Button on a paid bill |
 | B13 | Delete bill | Bottom button when editing |
 
+## Budget screen (`src/app/budget.tsx`)
+
+| ID | Text | Where |
+|----|------|-------|
+| U1 | Budget | Screen title and chips label |
+| U2 | By paycheque / By month / By term | Budget period chips |
+| U3 | Right now that's {start} to {end}. | Under the chips |
+| U4 | Add a payday below to budget by paycheque. Until then we go by month. | Under the chips when paycheque is picked with no payday |
+| U5 | Add term money on the Plan tab to budget by term. Until then we go by month. | Under the chips when term is picked with no term money |
+| U6 | Paydays | Section heading |
+| U7 | Payday | Row title for a payday with no name |
+| U8 | Next {day} · {frequency} | Under each payday ("No upcoming payday" when there isn't one) |
+| U9 | No paydays yet. Add one and your daily number runs from one payday to the next. | Shown with no paydays |
+| U10 | Add a payday | Button |
+
+## Payday sheet (`src/app/income.tsx`)
+
+| ID | Text | Where |
+|----|------|-------|
+| Y1 | Add a payday / Edit payday | Sheet title |
+| Y2 | What is it? | Name label (placeholder "Part-time job") |
+| Y3 | How much? / How often? / Next payday | Field labels |
+| Y4 | We never add this to your balance for you. Log it with + when it lands. | Note |
+| Y5 | Save / Delete payday | Buttons |
+
+## Term money sheet (`src/app/term-plan.tsx`, wording by region in `src/lib/term.ts`)
+
+| ID | Text | Where |
+|----|------|-------|
+| M1 | Add term money / Edit term money | Sheet title |
+| M2 | OSAP, a scholarship or co-op pay: money that lands once and has to last the term. | Intro in Canada |
+| M3 | A financial aid refund or a scholarship: money that lands once and has to last the term. | Intro in the US |
+| M4 | A maintenance loan or a bursary: money that lands once and has to last the term. | Intro in the UK |
+| M5 | A loan, grant or scholarship: money that lands once and has to last the term. | Intro elsewhere |
+| M6 | OSAP / Financial aid refund / Maintenance loan / Term money | Name placeholder, and the name used if left empty |
+| M7 | What is it? / How much? / It has to last from / Until | Field labels |
+| M8 | The last day has to come after the first. | Shown when the dates are the wrong way round |
+| M9 | That's about {amount} a week until {date}. | Preview once the form is filled in |
+| M10 | Count it in your balance once it lands. We hold back the part meant for later weeks. | Note |
+| M11 | Save / Delete term money | Buttons |
+
+## Goal sheet (`src/app/goal.tsx`)
+
+| ID | Text | Where |
+|----|------|-------|
+| N1 | Add a goal / Edit goal | Sheet title |
+| N2 | What's it for? | Name label (placeholder "Laptop") |
+| N3 | How much? / By when? | Field labels |
+| N4 | Set money aside | Heading on an unfinished goal |
+| N5 | {saved} of {target} so far. Move it to savings in your banking app, then log it here. | Under N4 with a savings account |
+| N6 | {saved} of {target} so far. Move it somewhere you won't spend it, then log it here. It comes out of your balance. | Under N4 with no savings account |
+| N7 | How much now? | Amount label |
+| N8 | Set it aside | Button |
+| N9 | Set aside {amount} for {goal} | Toast afterwards |
+| N10 | Saved for {goal} | Name of the entry it logs, seen in Activity (`src/db/plan.ts`) |
+| N11 | Save / Delete goal | Buttons |
+
+## Categories (`src/app/categories.tsx`, `src/app/category.tsx`)
+
+| ID | Text | Where |
+|----|------|-------|
+| R1 | Categories | Screen title |
+| R2 | Need / Want / Savings / Money in | Kind shown on each row and as chips in the sheet (`src/lib/categories.ts`) |
+| R3 | Add a category | Button, and sheet title (new) |
+| R4 | Edit category | Sheet title (editing) |
+| R5 | Name | Name label (placeholder "Takeout") |
+| R6 | Sticker / Colour / What kind? | Picker labels |
+| R12 | Or type your own | Field under the sticker grid (placeholder "Switch to the emoji keyboard") |
+| R7 | Money you move to savings never counts as spending. | Note when Savings is picked |
+| R8 | Shows up when you log money coming in. | Note when Money in is picked |
+| R9 | Deleting keeps your entries. They just lose the sticker. | Above the delete button |
+| R10 | Save / Delete category | Buttons |
+| R11 | Groceries, Eating out, Coffee, Transit, Rent & bills, School, Health, Fun, Shopping, Subscriptions, Savings, Income | The 12 starting categories (`app/packages/core/src/categories.ts`) |
+
+## Reminders screen (`src/app/reminders.tsx`)
+
+| ID | Text | Where |
+|----|------|-------|
+| W1 | Reminders | Screen title |
+| W2 | Notifications aren't on yet / Turn on notifications | Card and button before iOS has been asked |
+| W3 | Notifications are off for Current in iPhone Settings / Open Settings | Card and button when iOS notifications are off |
+| W4 | Bills coming up · 3 days before a bill is due. | First switch |
+| W5 | Sunday summary · What you spent this week and your daily number. | Second switch |
+| W6 | Balance checks · When your balance hasn't been checked for over a week. | Third switch |
+| W7 | Never more than one a day. They're made on your phone, not sent from a server. | Note at the bottom |
+
+## Notifications (`src/lib/reminder-text.ts`)
+
+| ID | Text | Where |
+|----|------|-------|
+| X1 | {bill} is due {weekday} | Bill reminder title (one bill) |
+| X2 | {amount}. It's already set aside in your daily number. | Bill reminder body (one bill) |
+| X3 | {N} bills due {weekday} | Bill reminder title (several) |
+| X4 | {names}: {amount} in all. Already set aside in your daily number. | Bill reminder body (several) |
+| X5 | Quick balance check? | Balance reminder title |
+| X6 | It's been over a week. Ten seconds keeps your daily number honest. | Balance reminder body |
+| X7 | Your week | Sunday summary title |
+| X8 | Spent {amount} this week, {amount} less/more than last week. Mostly {categories}. {amount}/day until {weekday}. | Sunday summary body (shorter when there is no last week, or nothing logged) |
+| X9 | Open Current to see how your week went. | Sunday summary body for Sundays further out |
+
 ## Settings (`src/app/settings.tsx`)
 
 | ID | Text | Where |
 |----|------|-------|
 | G1 | Settings | Screen title |
-| G2 | Accounts | First card title |
-| G3 | Balances, check-ins, and adding cash or savings. | First card subtext |
-| G4 | Your budget lives on your phone | Second card title |
-| G5 | No account. No bank login. | Second card subtext |
+| G2 | Accounts | Card title |
+| G3 | Balances, check-ins, and adding cash or savings. | Accounts card subtext |
+| G4 | Your budget lives on your phone | Last card title |
+| G5 | No account. No bank login. It's included in iCloud device backups, and you can export everything you've logged as a CSV any time. | Last card text |
+| G6 | Budget | Card title |
+| G7 | By paycheque, month or term, and when you get paid. | Budget card subtext |
+| G8 | Categories | Card title |
+| G9 | Rename them, change their stickers, or add your own. | Categories card subtext |
+| G10 | Reminders | Card title |
+| G11 | Bills coming up, your Sunday summary and balance checks. | Reminders card subtext |
+| G12 | Export CSV | Button on the last card |
+| G13 | Couldn't export: {error} | Error line on the last card |
 
 ## Accounts list (`src/app/accounts.tsx`)
 
