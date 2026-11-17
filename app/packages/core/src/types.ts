@@ -7,6 +7,8 @@ export interface Account {
   name?: string;
   type: AccountType;
   balance: Cents;
+  // when the user last confirmed the real balance
+  lastCheckInAt?: Date | null;
 }
 
 export type CategoryKind = "needs" | "wants" | "savings" | "income";

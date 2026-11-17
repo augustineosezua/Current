@@ -104,6 +104,10 @@ export const MIGRATIONS: readonly string[] = [
     value TEXT NOT NULL
   );
   `,
+  // 1.1: a recurring bill's next occurrence remembers the bill that created it, so undoing a payment can remove it
+  `
+  ALTER TABLE bills ADD COLUMN previousBillId TEXT;
+  `,
 ];
 
 export const DATABASE_VERSION = MIGRATIONS.length;

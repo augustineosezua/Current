@@ -58,6 +58,9 @@ Zero is lilac, not red. Running out is never shown as an alarm.
 - `Sticker`: an emoji on a `cat-*` fill with an ink edge and a tilt. Sizes `sm` 36, `md` 44, `lg` 80. Decorative, so screen readers skip it; the row's text carries the meaning.
 - `StsHero`: the daily number card. Its colour and copy come from its mood, and the number counts to its new value.
 - `EmptyState`: a pile of 2 or 3 large stickers, a title and one line saying what to do next.
+- `Sheet`, `Field`, `AmountField`, `Chips`, `Button` (`components/form.tsx`): the pieces every form sheet is built from. `Button` is `primary` (ink-edge pill, one per sheet), `secondary` (flat `field` pill) or `plain` (text only: Skip, Delete).
+- `DateField`: a date row that opens a month calendar drawn in code.
+- `Toast` (`useToast`): the ink pill confirmation above the tab bar, with an optional Undo.
 - `TabBar`: a floating pill with three tabs (Home, Activity, Plan) and a separate coral **+** button to its right that opens the Log spending sheet. Settings opens from the gear on Home; bills, goals and term plans live under Plan.
 
 ## Motion and haptics

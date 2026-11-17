@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
@@ -20,10 +20,20 @@ function BackButton() {
   );
 }
 
-// settings (filled in by later items)
+// settings: accounts for now; more rows arrive with later items
 export default function SettingsScreen() {
   return (
     <Screen header={<BackButton />} title="Settings">
+      <Link href="/accounts" asChild>
+        <Pressable accessibilityRole="button" className="active:opacity-80">
+          <Raised>
+            <View className="gap-1 p-5">
+              <Text className="font-display-bold text-lg text-ink">Accounts</Text>
+              <Text className="font-sans text-base text-muted">Balances, check-ins, and adding cash or savings.</Text>
+            </View>
+          </Raised>
+        </Pressable>
+      </Link>
       <Raised>
         <View className="gap-1 p-5">
           <Text className="font-display-bold text-lg text-ink">Your budget lives on your phone</Text>

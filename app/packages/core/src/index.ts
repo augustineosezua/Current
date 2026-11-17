@@ -5,6 +5,7 @@ export * from "./types";
 export * from "./income";
 export * from "./period";
 export * from "./bills";
+export * from "./checkIn";
 export * from "./goals";
 export * from "./termPlan";
 export * from "./sts";

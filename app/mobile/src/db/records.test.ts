@@ -61,6 +61,7 @@ describe('row mappers', () => {
       anchorDay: 31,
       categoryId: null,
       accountId: null,
+      previousBillId: null,
     };
     const bill = fromRow.bill({ ...meta, ...toRow.bill(fields) });
     expect(bill).toMatchObject(fields);
@@ -92,7 +93,7 @@ describe('settings', () => {
       { ...meta, id: 'minimumMonthlySpend', value: 'not json' },
       { ...meta, id: 'unknownKey', value: '1' },
     ];
-    expect(settingsFromRows(rows)).toEqual({ budgetPeriod: 'term', minimumMonthlySpend: 0 });
+    expect(settingsFromRows(rows)).toEqual({ budgetPeriod: 'term', minimumMonthlySpend: 0, onboarded: false });
     expect(settingsFromRows([])).toEqual(DEFAULT_SETTINGS);
   });
 });

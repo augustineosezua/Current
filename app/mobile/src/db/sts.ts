@@ -1,12 +1,34 @@
-import { calculateSafeToSpend, type StsInput, type StsResult } from '@current/core';
-import { useFocusEffect } from 'expo-router';
-import { useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { calculateSafeToSpend, type StsResult } from '@current/core';
+import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { useLiveQuery } from '@/hooks/use-live-query';
+
+import type {
+  AccountRecord,
+  BillRecord,
+  CategoryRecord,
+  GoalRecord,
+  IncomeRecord,
+  Settings,
+  TermPlanRecord,
+  TransactionRecord,
+} from './records';
 import * as repo from './repo';
 
+// everything core needs for Safe-to-Spend, as stored locally
+export interface BudgetData {
+  accounts: AccountRecord[];
+  bills: BillRecord[];
+  goals: GoalRecord[];
+  incomes: IncomeRecord[];
+  termPlans: TermPlanRecord[];
+  transactions: TransactionRecord[];
+  categories: CategoryRecord[];
+  settings: Settings;
+}
+
 // read every table core needs; core does the math, nothing is written back
-export async function loadStsInput(db: SQLiteDatabase): Promise<StsInput> {
+export async function loadStsInput(db: SQLiteDatabase): Promise<BudgetData> {
   const [accounts, bills, goals, incomes, termPlans, transactions, categories, settings] = await Promise.all([
     repo.accounts.list(db),
     repo.bills.list(db),
@@ -20,28 +42,14 @@ export async function loadStsInput(db: SQLiteDatabase): Promise<StsInput> {
   return { accounts, bills, goals, incomes, termPlans, transactions, categories, settings };
 }
 
-// Safe-to-Spend for the focused screen, recomputed each time it regains focus
-export function useSafeToSpend(): { result: StsResult | null; error: Error | null } {
-  const db = useSQLiteContext();
-  const [result, setResult] = useState<StsResult | null>(null);
-  const [error, setError] = useState<Error | null>(null);
+// the data plus the number computed from it, so a screen never shows one without the other
+async function loadBudget(db: SQLiteDatabase): Promise<{ input: BudgetData; result: StsResult }> {
+  const input = await loadStsInput(db);
+  return { input, result: calculateSafeToSpend(input, new Date()) };
+}
 
-  // reload on focus, ignoring results from a screen that has since blurred
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      loadStsInput(db)
-        .then((input) => {
-          if (active) setResult(calculateSafeToSpend(input, new Date()));
-        })
-        .catch((e: unknown) => {
-          if (active) setError(e instanceof Error ? e : new Error(String(e)));
-        });
-      return () => {
-        active = false;
-      };
-    }, [db]),
-  );
-
-  return { result, error };
+// Safe-to-Spend for the focused screen, recomputed on focus and after every local write
+export function useSafeToSpend(): { result: StsResult | null; input: BudgetData | null; error: Error | null } {
+  const { data, error } = useLiveQuery(loadBudget);
+  return { result: data?.result ?? null, input: data?.input ?? null, error };
 }

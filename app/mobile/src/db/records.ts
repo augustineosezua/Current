@@ -31,7 +31,7 @@ export type AccountRecord = Account & SyncMeta & {
 };
 export type CategoryRecord = Category & SyncMeta & { emoji: string; color: string; sortOrder: number };
 export type TransactionRecord = Transaction & SyncMeta & { note: string | null; billId: string | null; createdFromBill: boolean };
-export type BillRecord = Bill & SyncMeta & { categoryId: string | null; accountId: string | null };
+export type BillRecord = Bill & SyncMeta & { categoryId: string | null; accountId: string | null; previousBillId: string | null };
 export type IncomeRecord = Income & SyncMeta;
 export type GoalRecord = Goal & SyncMeta;
 export type TermPlanRecord = TermPlan & SyncMeta;
@@ -40,8 +40,10 @@ export type TermPlanRecord = TermPlan & SyncMeta;
 export interface Settings {
   budgetPeriod: BudgetPeriodKind | null;
   minimumMonthlySpend: Cents;
+  // true once the first-run setup has been finished
+  onboarded: boolean;
 }
-export const DEFAULT_SETTINGS: Settings = { budgetPeriod: null, minimumMonthlySpend: 0 };
+export const DEFAULT_SETTINGS: Settings = { budgetPeriod: null, minimumMonthlySpend: 0, onboarded: false };
 export type SettingKey = keyof Settings;
 
 // settings rows (id = key, value = JSON) -> Settings, defaults for missing or unreadable keys
@@ -144,6 +146,7 @@ export const fromRow = {
     anchorDay: r.anchorDay == null ? undefined : num(r.anchorDay),
     categoryId: strOrNull(r.categoryId),
     accountId: strOrNull(r.accountId),
+    previousBillId: strOrNull(r.previousBillId),
   }),
   income: (r: Row): IncomeRecord => ({
     id: str(r.id),
@@ -215,6 +218,7 @@ export const toRow = {
       anchorDay: b.anchorDay,
       categoryId: b.categoryId,
       accountId: b.accountId,
+      previousBillId: b.previousBillId,
     }),
   income: (i: Partial<Fields<IncomeRecord>>): Row =>
     pick(i, {

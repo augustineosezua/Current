@@ -23,6 +23,21 @@ export function getNextBillOccurrence(bill: Bill): Date | null {
   return occurrence(bill.dueDate, bill.frequency, 1, bill.anchorDay ?? bill.dueDate.getDate());
 }
 
+export interface BillPaymentPlan {
+  // the transaction that marking the bill paid logs
+  transaction: { amount: Cents; date: Date; merchantName: string; billId: string; createdFromBill: true };
+  // due date of the occurrence to create next, for recurring bills
+  nextDueDate: Date | null;
+}
+
+// what marking a bill paid on a given day should write
+export function planBillPayment(bill: Bill, paidOn: Date): BillPaymentPlan {
+  return {
+    transaction: { amount: bill.amount, date: startOfDay(paidOn), merchantName: bill.name, billId: bill.id, createdFromBill: true },
+    nextDueDate: getNextBillOccurrence(bill),
+  };
+}
+
 // overdue when unpaid and due before today
 export function getBillStatus(bill: Bill, now: Date): BillStatus {
   if (bill.isPaid) return "paid";

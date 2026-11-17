@@ -11,11 +11,12 @@ import { SQLiteProvider } from 'expo-sqlite';
 import { useEffect } from 'react';
 import { useCSSVariable } from 'uniwind';
 
+import { ToastProvider } from '@/components/toast';
 import { migrateDbIfNeeded } from '@/db/migrate';
 
 SplashScreen.preventAutoHideAsync();
 
-// app root: fonts, local database, tabs with the add sheet and settings on top
+// app root: fonts, local database, tabs with the form sheets, settings and first-run setup on top
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     BricolageGrotesque_700Bold,
@@ -35,11 +36,18 @@ export default function RootLayout() {
 
   return (
     <SQLiteProvider databaseName="current.db" onInit={migrateDbIfNeeded}>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: bg } }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="add" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
-        <Stack.Screen name="settings" />
-      </Stack>
+      <ToastProvider>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: bg } }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="onboarding" options={{ gestureEnabled: false, animation: 'fade' }} />
+          <Stack.Screen name="add" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="bill" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="account" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="check-in" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="accounts" />
+        </Stack>
+      </ToastProvider>
     </SQLiteProvider>
   );
 }
