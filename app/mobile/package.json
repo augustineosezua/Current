@@ -45,6 +45,7 @@
   "scripts": {
     "start": "expo start",
     "ios": "expo run:ios",
+    "phone": "npm install && expo prebuild --clean --platform ios && expo run:ios --device --configuration Release",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint"
