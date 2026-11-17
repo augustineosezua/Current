@@ -8,5 +8,6 @@ export * from "./bills";
 export * from "./goals";
 export * from "./termPlan";
 export * from "./sts";
+export * from "./mood";
 export * from "./categorize";
 export * from "./reconcile";

@@ -1,26 +1,81 @@
 @import 'tailwindcss';
 @import 'uniwind';
 
-/* design tokens from app/web/DESIGN.MD: six colours, opacity for everything else */
+/* Sticker Book design tokens. Source of truth: app/mobile/DESIGN.md */
+
+/* tokens that are the same in light and dark */
 @theme static {
-  --color-ink: #1a1a2e;
-  --color-surface: #16213e;
-  --color-accent: #5eb3ff;
-  --color-gold: #f5c400;
-  --color-white: #ffffff;
-  --color-income: #3ecf8e;
+  /* brand coral: the + button, icon, screenshots */
+  --color-brand: #ff7a59;
+  --color-on-brand: #2a1008;
+
+  /* category sticker fills (1.2); emoji sit on them, so no text-contrast need */
+  --color-cat-peach: #ffd9c7;
+  --color-cat-mint: #cdefd9;
+  --color-cat-sky: #cfe6ff;
+  --color-cat-pink: #ffd6e8;
+  --color-cat-lilac: #e3d9ff;
+  --color-cat-butter: #fff0a8;
+  --color-cat-aqua: #c8f0ee;
+  --color-cat-sand: #f1e3cc;
+  --color-cat-sage: #dce9c8;
+  --color-cat-coral: #ffc9bf;
+  --color-cat-lavender: #d9dcff;
+  --color-cat-stone: #e4ded6;
 
   --radius-sm: 12px;
   --radius-md: 20px;
   --radius-lg: 28px;
 
   /* names must match the families loaded by useFonts in _layout.tsx */
-  --font-sans: 'Manrope_400Regular';
-  --font-sans-medium: 'Manrope_500Medium';
-  --font-sans-semibold: 'Manrope_600SemiBold';
-  --font-sans-bold: 'Manrope_700Bold';
-  --font-sans-extrabold: 'Manrope_800ExtraBold';
+  --font-display: 'BricolageGrotesque_800ExtraBold';
+  --font-display-bold: 'BricolageGrotesque_700Bold';
+  --font-sans: 'DMSans_400Regular';
+  --font-sans-medium: 'DMSans_500Medium';
+  --font-sans-bold: 'DMSans_700Bold';
 
-  --text-sts: 56px;
-  --text-sts--line-height: 64px;
+  --text-sts: 96px;
+  --text-sts--line-height: 100px;
+}
+
+/* tokens that follow the system appearance */
+@layer theme {
+  :root {
+    @variant light {
+      --color-bg: #fbf5ec;
+      --color-card: #ffffff;
+      --color-field: #efe6da;
+      --color-ink: #2a2420;
+      --color-muted: #6e625a;
+      /* the sticker outline and hard shadow */
+      --color-edge: #2a2420;
+      --color-cta: #2a2420;
+      --color-on-cta: #ffffff;
+
+      /* daily number states */
+      --color-good: #cdefd9;
+      --color-on-good: #0f3d22;
+      --color-tight: #ffe8a3;
+      --color-on-tight: #5c4300;
+      --color-zero: #e6e0f5;
+      --color-on-zero: #3f3566;
+    }
+    @variant dark {
+      --color-bg: #1c1916;
+      --color-card: #2a2521;
+      --color-field: #352f2a;
+      --color-ink: #f6efe6;
+      --color-muted: #b5a99c;
+      --color-edge: #0b0a09;
+      --color-cta: #f6efe6;
+      --color-on-cta: #1c1916;
+
+      --color-good: #1f3b2b;
+      --color-on-good: #a7f3c4;
+      --color-tight: #3d3216;
+      --color-on-tight: #ffd966;
+      --color-zero: #2c2740;
+      --color-on-zero: #d6ccff;
+    }
+  }
 }

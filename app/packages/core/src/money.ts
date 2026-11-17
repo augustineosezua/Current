@@ -62,3 +62,10 @@ export function toCents(input: string | number): Cents | null {
 export function formatMoney(cents: Cents, locale = "en-CA", currency = "CAD"): string {
   return new Intl.NumberFormat(locale, { style: "currency", currency }).format(cents / 100);
 }
+
+// whole units for headline numbers, rounded down so it never overstates what's safe
+export function formatMoneyWhole(cents: Cents, locale = "en-CA", currency = "CAD"): string {
+  return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(
+    Math.floor(cents / 100),
+  );
+}

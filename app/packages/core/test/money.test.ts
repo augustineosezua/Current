@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertCents, formatMoney, isCents, sumCents, toCents } from "../src";
+import { assertCents, formatMoney, formatMoneyWhole, isCents, sumCents, toCents } from "../src";
 
 describe("money", () => {
   it("parses common user input into integer cents", () => {
@@ -33,5 +33,11 @@ describe("money", () => {
     expect(formatMoney(2_300, "en-US", "USD")).toBe("$23.00");
     expect(formatMoney(2_300, "en-GB", "GBP")).toBe("£23.00");
     expect(formatMoney(123_456, "fr-CA", "CAD").replace(/\s/g, " ")).toBe("1 234,56 $");
+  });
+
+  it("formats headline numbers in whole units, rounding down", () => {
+    expect(formatMoneyWhole(2_399)).toBe("$23");
+    expect(formatMoneyWhole(0)).toBe("$0");
+    expect(formatMoneyWhole(123_456, "en-GB", "GBP")).toBe("£1,234");
   });
 });
