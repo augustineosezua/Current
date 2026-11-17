@@ -13,6 +13,7 @@ import {
   editTransaction,
   markBillPaid,
   markBillUnpaid,
+  updateAccount,
   CHECK_IN_MERCHANT,
 } from './ledger';
 import * as repo from './repo';
@@ -94,6 +95,26 @@ describe('balance check-ins', () => {
     await checkInBalance(db, chequing, 50_000, 'log', day(9));
     expect(await repo.transactions.list(db)).toHaveLength(0);
     expect((await repo.accounts.get(db, chequing))!.lastCheckInAt).toEqual(day(9));
+  });
+});
+
+describe('editing an account', () => {
+  it('saves a new balance with no transaction and counts it as a check-in', async () => {
+    await updateAccount(db, chequing, { name: 'Main', type: 'chequing', balance: 61_000 }, day(9));
+    const account = (await repo.accounts.get(db, chequing))!;
+    expect(account).toMatchObject({ name: 'Main', balance: 61_000 });
+    expect(account.lastCheckInAt).toEqual(day(9));
+    expect(await repo.transactions.list(db)).toHaveLength(0);
+  });
+
+  it('leaves the check-in date alone when only the name changes', async () => {
+    const before = (await repo.accounts.get(db, chequing))!.lastCheckInAt;
+    await updateAccount(db, chequing, { name: 'Renamed', balance: 50_000 }, day(9));
+    expect((await repo.accounts.get(db, chequing))!.lastCheckInAt).toEqual(before);
+  });
+
+  it('refuses a fractional balance', async () => {
+    await expect(updateAccount(db, chequing, { balance: 10.5 })).rejects.toThrow(/integer cents/);
   });
 });
 

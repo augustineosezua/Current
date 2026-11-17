@@ -34,8 +34,13 @@ export function weekdayLabel(date: Date): string {
   return weekdayLong.format(date);
 }
 
+// "Friday, Jan 8": where the daily number runs until, so it's never ambiguous which Friday
+export function untilLabel(date: Date): string {
+  return `${weekdayLong.format(date)}, ${monthDay.format(date)}`;
+}
+
 // what one budget period is called in a sentence
-export const PERIOD_NOUNS: Record<BudgetPeriodKind, string> = { paycheque: 'paycheque', monthly: 'month', term: 'term' };
+export const PERIOD_NOUNS: Record<BudgetPeriodKind, string> = { paycheque: 'paycheque', monthly: 'month', term: 'semester' };
 
 // "today", "yesterday" or "9 days ago"
 export function daysAgoLabel(date: Date, now = new Date()): string {

@@ -42,7 +42,7 @@ export function PeriodSummary({ input, result }: { input: BudgetData; result: St
             {formatMoney(summary.total)} <Text className="font-display-bold text-lg">spent</Text>
           </Text>
           {compared ? <Text className="font-sans-medium text-base text-ink">{compared}</Text> : null}
-          {summary.total === 0 ? <Text className="font-sans text-base text-muted">Nothing spent yet this {noun}.</Text> : null}
+          {summary.total === 0 ? <Text className="font-sans text-base text-muted">No spending yet this {noun}.</Text> : null}
         </View>
 
         {rows.map((row) => {

@@ -86,7 +86,7 @@ function BillForm({ bill, accounts, categories }: FormData) {
       if (!paid) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       toast({
-        message: `Logged ${formatMoney(paid.amount)} from ${paid.name}`,
+        message: `Paid ${paid.name}, ${formatMoney(paid.amount)} logged`,
         actionLabel: 'Undo',
         onAction: () => void markBillUnpaid(db, bill.id),
       });
@@ -99,7 +99,7 @@ function BillForm({ bill, accounts, categories }: FormData) {
       <DateField label="Next due" value={dueDate} onChange={setDueDate} />
       <Chips label="Repeats" options={REPEATS} value={frequency} onChange={setFrequency} />
       <CategoryPicker categories={categories} value={categoryId} onChange={setPickedCategory} />
-      {error ? <Text className="font-sans-medium text-base text-ink">Couldn&apos;t save: {error}</Text> : null}
+      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
       <Button label="Save" onPress={save} disabled={!valid} />
 
       {bill && !bill.isPaid ? (

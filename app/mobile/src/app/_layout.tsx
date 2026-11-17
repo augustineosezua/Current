@@ -1,16 +1,14 @@
 import '@/global.css';
 
-import {
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-} from '@expo-google-fonts/bricolage-grotesque';
-import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold, useFonts } from '@expo-google-fonts/dm-sans';
+import { Fredoka_600SemiBold, Fredoka_700Bold } from '@expo-google-fonts/fredoka';
+import { Nunito_500Medium, Nunito_600SemiBold, Nunito_800ExtraBold, useFonts } from '@expo-google-fonts/nunito';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider } from 'expo-sqlite';
 import { useEffect } from 'react';
 import { useCSSVariable } from 'uniwind';
 
+import { ForegroundRefresh } from '@/components/foreground-refresh';
 import { ReminderSync } from '@/components/reminder-sync';
 import { ToastProvider } from '@/components/toast';
 import { migrateDbIfNeeded } from '@/db/migrate';
@@ -20,11 +18,11 @@ SplashScreen.preventAutoHideAsync();
 // app root: fonts, local database, tabs with the form sheets, settings and first-run setup on top
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    BricolageGrotesque_700Bold,
-    BricolageGrotesque_800ExtraBold,
-    DMSans_400Regular,
-    DMSans_500Medium,
-    DMSans_700Bold,
+    Fredoka_600SemiBold,
+    Fredoka_700Bold,
+    Nunito_500Medium,
+    Nunito_600SemiBold,
+    Nunito_800ExtraBold,
   });
   const bg = useCSSVariable('--color-bg') as string;
 
@@ -38,6 +36,7 @@ export default function RootLayout() {
   return (
     <SQLiteProvider databaseName="current.db" onInit={migrateDbIfNeeded}>
       <ReminderSync />
+      <ForegroundRefresh />
       <ToastProvider>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: bg } }}>
           <Stack.Screen name="(tabs)" />

@@ -42,7 +42,15 @@
       ],
       "expo-sqlite",
       "expo-sharing",
-      "expo-notifications"
+      [
+        "expo-notifications",
+        {
+          "enableRemoteNotifications": false
+        }
+      ],
+      "@react-native-ai/apple",
+      "expo-localization",
+      "expo-alternate-app-icons"
     ],
     "experiments": {
       "typedRoutes": true,

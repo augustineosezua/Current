@@ -1,3 +1,5 @@
 unpaid and late bills will be counted as negatives to the safe to spend amount - even if their due dates have passed
 
 Budget period (ROADMAP 1.4, shipped in the mobile app): the budget runs by paycheque, by month or by term. It defaults to paycheque when an income has an upcoming date, otherwise month. Month is the calendar month, paycheque runs from the last payday to the day before the next, and term uses the active term plan's dates; a chosen period with no data behind it falls back to month. Safe-to-Spend counts unpaid bills due on or before max(period end, today + 7 days), overdue unpaid bills always count, and the minimum-spend floor is prorated to the period length.
+
+Picked end date (November 17, 2026): the user can choose a day for the current budget to end. It replaces the period's end and keeps its start, so Safe-to-Spend, the daily number and the bills cutoff all run to that day. It can't be in the past, and once it has passed it is ignored, so budgeting returns to the automatic periods on its own.

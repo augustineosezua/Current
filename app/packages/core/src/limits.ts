@@ -3,7 +3,7 @@ import type { Goal } from "./goals";
 import type { TermPlan } from "./termPlan";
 
 // what the free app includes; Plus (2.4) lifts both
-export const FREE_LIMITS = { goals: 2, activeTermPlans: 1 } as const;
+export const FREE_LIMITS = { goals: 3, activeTermPlans: 1 } as const;
 
 // a plan still counts until its last day has passed
 export function isTermPlanCurrent(plan: TermPlan, now: Date): boolean {

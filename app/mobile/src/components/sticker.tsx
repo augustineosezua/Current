@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 
 // literal class lists so Tailwind can see them
 const SIZES = {
@@ -11,7 +12,7 @@ const TILTS = ['-rotate-6', '-rotate-3', 'rotate-0', 'rotate-3', 'rotate-6'] as 
 
 export type StickerTilt = -2 | -1 | 0 | 1 | 2;
 
-// die-cut category sticker: emoji on a colour fill, ink outline, slight tilt
+// die-cut category sticker: emoji on a colour fill, a white edge, a soft ledge shadow and a slight tilt
 export function Sticker({
   emoji,
   fill,
@@ -24,10 +25,12 @@ export function Sticker({
   size?: keyof typeof SIZES;
   tilt?: StickerTilt;
 }) {
+  const ledge = useCSSVariable('--color-ledge') as string;
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
+      style={{ boxShadow: `0 2px 0 ${ledge}` }}
       className={`items-center justify-center border-2 border-edge ${SIZES[size]} ${fill} ${TILTS[tilt + 2]}`}>
       <Text className={EMOJI[size]}>{emoji}</Text>
     </View>

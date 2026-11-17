@@ -56,24 +56,28 @@ describe('editing categories', () => {
 describe('reordering categories', () => {
   const order = async () => (await repo.categories.list(db)).map((c) => c.id);
 
-  it('moves one place up or down and keeps the rest in order', async () => {
+  it('moves past the nearest category of the same kind and keeps the rest in order', async () => {
+    // Coffee (want) moves above Eating out (want)
     await moveCategory(db, 'default-coffee', 'up');
     expect((await order()).slice(0, 4)).toEqual(['default-groceries', 'default-coffee', 'default-eating-out', 'default-transit']);
+    // Groceries (need) moves below Transit, the next need, skipping the wants in between
     await moveCategory(db, 'default-groceries', 'down');
-    expect((await order()).slice(0, 3)).toEqual(['default-coffee', 'default-groceries', 'default-eating-out']);
+    expect((await order()).slice(0, 4)).toEqual(['default-transit', 'default-coffee', 'default-eating-out', 'default-groceries']);
   });
 
-  it('does nothing at either end', async () => {
+  it('does nothing at either end of its group', async () => {
     const before = await order();
     await moveCategory(db, 'default-groceries', 'up');
+    await moveCategory(db, 'default-subscriptions', 'down');
     await moveCategory(db, 'default-income', 'down');
     expect(await order()).toEqual(before);
   });
 
   it('still works after a category in the middle was deleted', async () => {
-    await deleteCategory(db, 'default-eating-out');
-    await moveCategory(db, 'default-coffee', 'up');
-    expect((await order()).slice(0, 3)).toEqual(['default-coffee', 'default-groceries', 'default-transit']);
+    await deleteCategory(db, 'default-coffee');
+    await moveCategory(db, 'default-fun', 'up');
+    const wants = (await repo.categories.list(db)).filter((c) => c.kind === 'wants').map((c) => c.id);
+    expect(wants.slice(0, 2)).toEqual(['default-fun', 'default-eating-out']);
     const sortOrders = (await repo.categories.list(db)).map((c) => c.sortOrder);
     expect(new Set(sortOrders).size).toBe(sortOrders.length);
   });

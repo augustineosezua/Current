@@ -15,9 +15,9 @@ import { useLiveQuery } from '@/hooks/use-live-query';
 import { getReminderPermission, requestReminderPermission, syncReminders, type ReminderPermission } from '@/lib/reminders';
 
 const TOGGLES: readonly { key: keyof ReminderSettings; title: string; body: string }[] = [
-  { key: 'bills', title: 'Bills coming up', body: '3 days before a bill is due.' },
-  { key: 'summary', title: 'Sunday summary', body: 'What you spent this week and your daily number.' },
-  { key: 'checkIn', title: 'Balance checks', body: 'When your balance hasn’t been checked for over a week.' },
+  { key: 'bills', title: 'Bills', body: 'A heads-up 3 days before something’s due.' },
+  { key: 'summary', title: 'Sunday recap', body: 'How your week went, plus your daily number.' },
+  { key: 'checkIn', title: 'Balance check', body: 'A nudge if you haven’t checked your balance in a week.' },
 ];
 
 // one reminder with its switch
@@ -65,13 +65,13 @@ export default function RemindersScreen() {
     <Screen header={<BackButton />} title="Reminders">
       {permission === 'ask' ? (
         <View className="gap-3 rounded-md bg-card p-4">
-          <Text className="font-sans-medium text-base text-ink">Notifications aren&apos;t on yet</Text>
-          <Button label="Turn on notifications" kind="secondary" onPress={() => void allow()} />
+          <Text className="font-sans-medium text-base text-ink">Notifications are off right now</Text>
+          <Button label="Turn them on" kind="secondary" onPress={() => void allow()} />
         </View>
       ) : null}
       {permission === 'denied' ? (
         <View className="gap-3 rounded-md bg-card p-4">
-          <Text className="font-sans-medium text-base text-ink">Notifications are off for Current in iPhone Settings</Text>
+          <Text className="font-sans-medium text-base text-ink">Notifications are blocked in your iPhone settings</Text>
           <Button label="Open Settings" kind="secondary" onPress={() => void Linking.openSettings()} />
         </View>
       ) : null}
@@ -89,7 +89,7 @@ export default function RemindersScreen() {
           ))}
         </View>
       </Raised>
-      <Text className="text-center font-sans text-sm text-muted">Never more than one a day. They&apos;re made on your phone, not sent from a server.</Text>
+      <Text className="text-center font-sans text-sm text-muted">Max one a day. They come from your phone, not from us.</Text>
     </Screen>
   );
 }

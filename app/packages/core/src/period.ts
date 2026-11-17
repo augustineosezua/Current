@@ -1,4 +1,4 @@
-import { addDays, endOfMonth, inclusiveDays, isWithin, startOfDay, startOfMonth } from "./dates";
+import { addDays, daysBetween, endOfMonth, inclusiveDays, isWithin, startOfDay, startOfMonth } from "./dates";
 import { getNextPaymentDate, getPreviousPaymentDate, type Income } from "./income";
 import type { TermPlan } from "./termPlan";
 
@@ -7,6 +7,8 @@ export type BudgetPeriodKind = "monthly" | "paycheque" | "term";
 export interface PeriodSettings {
   // unset means "use the default"
   budgetPeriod?: BudgetPeriodKind | null;
+  // a day the user picked for the current budget to end; ignored once it has passed, so periods go back to normal
+  periodEndOverride?: Date | null;
 }
 
 // inclusive calendar-day range
@@ -59,15 +61,23 @@ function termPeriod(plans: readonly TermPlan[], now: Date): Period | null {
   return { kind: "term", start: startOfDay(plan.startDate), end: startOfDay(plan.endDate) };
 }
 
-// the current budget period, falling back to monthly when the chosen kind has no data
+// the period the chosen kind gives on its own, falling back to monthly when that kind has no data
+function automaticPeriod(settings: PeriodSettings, incomes: readonly Income[], termPlans: readonly TermPlan[], now: Date): Period {
+  const kind = settings.budgetPeriod ?? defaultBudgetPeriod(incomes, now);
+  if (kind === "paycheque") return paychequePeriod(incomes, now) ?? monthlyPeriod(now);
+  if (kind === "term") return termPeriod(termPlans, now) ?? monthlyPeriod(now);
+  return monthlyPeriod(now);
+}
+
+// the current budget period; a picked end day that hasn't passed replaces the period's end, keeping its start and kind
 export function getCurrentPeriod(
   settings: PeriodSettings,
   incomes: readonly Income[],
   termPlans: readonly TermPlan[],
   now: Date,
 ): Period {
-  const kind = settings.budgetPeriod ?? defaultBudgetPeriod(incomes, now);
-  if (kind === "paycheque") return paychequePeriod(incomes, now) ?? monthlyPeriod(now);
-  if (kind === "term") return termPeriod(termPlans, now) ?? monthlyPeriod(now);
-  return monthlyPeriod(now);
+  const period = automaticPeriod(settings, incomes, termPlans, now);
+  const override = settings.periodEndOverride;
+  if (!override || daysBetween(startOfDay(now), override) < 0) return period;
+  return { ...period, end: startOfDay(override) };
 }

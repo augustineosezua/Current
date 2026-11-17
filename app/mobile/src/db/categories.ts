@@ -27,13 +27,19 @@ export async function updateCategory(db: SQLiteDatabase, id: string, changes: Pa
   notifyChange();
 }
 
-// move a category one place up or down the list
+// Move a category one place up or down among categories of the same kind (Needs, Wants, ...). The screen shows
+// them grouped by kind, so a step always lands next to a neighbour you can see.
 export async function moveCategory(db: SQLiteDatabase, id: string, direction: 'up' | 'down'): Promise<void> {
   const ordered = await repo.categories.list(db);
-  const from = ordered.findIndex((c) => c.id === id);
-  const to = direction === 'up' ? from - 1 : from + 1;
-  if (from < 0 || to < 0 || to >= ordered.length) return;
-  [ordered[from], ordered[to]] = [ordered[to]!, ordered[from]!];
+  const me = ordered.find((c) => c.id === id);
+  if (!me) return;
+  const group = ordered.filter((c) => c.kind === me.kind);
+  const at = group.indexOf(me);
+  const other = group[direction === 'up' ? at - 1 : at + 1];
+  if (!other) return;
+  const a = ordered.indexOf(me);
+  const b = ordered.indexOf(other);
+  [ordered[a], ordered[b]] = [ordered[b]!, ordered[a]!];
 
   // renumber so positions are always distinct; only changed rows are written, all or none
   await db.withTransactionAsync(async () => {

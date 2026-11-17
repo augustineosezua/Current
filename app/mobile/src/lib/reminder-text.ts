@@ -9,7 +9,7 @@ import {
   type WeeklySummary,
 } from '@current/core';
 
-import { weekdayLabel } from './format';
+import { untilLabel, weekdayLabel } from './format';
 
 export interface ReminderContent {
   title: string;
@@ -42,7 +42,7 @@ function summaryBody(f: SummaryFigures): string {
     parts.push(`Spent ${formatMoneyWhole(spent)} this week, ${gap} ${spent < lastWeekSpent ? 'less' : 'more'} than last week.`);
   }
   if (f.topCategoryNames.length > 0) parts.push(`Mostly ${list(f.topCategoryNames)}.`);
-  parts.push(`${formatMoneyWhole(f.perDay)}/day until ${weekdayLabel(f.periodEnd)}.`);
+  parts.push(`${formatMoneyWhole(f.perDay)}/day until ${untilLabel(f.periodEnd)}.`);
   return parts.join(' ');
 }
 
@@ -52,16 +52,16 @@ export function reminderContent(reminder: Reminder, summary: SummaryFigures | nu
     const due = weekdayLabel(addDays(reminder.date, BILL_REMINDER_DAYS_BEFORE));
     const [first] = reminder.bills;
     if (reminder.bills.length === 1 && first) {
-      return { title: `${first.name} is due ${due}`, body: `${formatMoney(first.amount)}. It's already set aside in your daily number.` };
+      return { title: `${first.name} is due ${due}`, body: `${formatMoney(first.amount)}. Your daily number already accounts for it.` };
     }
     const total = reminder.bills.reduce((sum, b) => sum + b.amount, 0);
     return {
       title: `${reminder.bills.length} bills due ${due}`,
-      body: `${list(reminder.bills.map((b) => b.name))}: ${formatMoney(total)} in all. Already set aside in your daily number.`,
+      body: `${list(reminder.bills.map((b) => b.name))}, ${formatMoney(total)} total. Your daily number already accounts for them.`,
     };
   }
   if (reminder.kind === 'checkIn') {
-    return { title: 'Quick balance check?', body: "It's been over a week. Ten seconds keeps your daily number honest." };
+    return { title: 'Mind checking your balance?', body: "It's been over a week. Takes a few seconds and keeps your number accurate." };
   }
-  return { title: 'Your week', body: summary ? summaryBody(summary) : 'Open Current to see how your week went.' };
+  return { title: 'Your week', body: summary ? summaryBody(summary) : 'Tap to see how your week went.' };
 }

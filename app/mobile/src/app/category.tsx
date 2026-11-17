@@ -10,11 +10,9 @@ import { createCategory, deleteCategory, updateCategory } from '@/db/categories'
 import type { CategoryRecord } from '@/db/records';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
-import { CATEGORY_EMOJI, CATEGORY_FILLS, fillFor, KIND_LABELS, lastEmoji } from '@/lib/categories';
+import { CATEGORY_EMOJI, CATEGORY_FILLS, fillFor, KIND_GROUPS, lastEmoji } from '@/lib/categories';
 
-const KINDS: readonly { value: CategoryKind; label: string }[] = (['needs', 'wants', 'savings', 'income'] as const).map(
-  (value) => ({ value, label: KIND_LABELS[value] }),
-);
+const KINDS: readonly { value: CategoryKind; label: string }[] = KIND_GROUPS.map((g) => ({ value: g.kind, label: g.title }));
 
 // add or edit a category: name, sticker and what kind of money it is
 function CategoryForm({ category }: { category: CategoryRecord | null }) {
@@ -58,7 +56,7 @@ function CategoryForm({ category }: { category: CategoryRecord | null }) {
     });
 
   return (
-    <Sheet title={category ? 'Edit category' : 'Add a category'}>
+    <Sheet title={category ? 'Edit category' : 'New category'}>
       <View className="items-center">
         <Sticker emoji={emoji} fill={fillFor(color)} size="lg" tilt={-1} />
       </View>
@@ -74,13 +72,13 @@ function CategoryForm({ category }: { category: CategoryRecord | null }) {
               accessibilityRole="button"
               accessibilityLabel={e}
               accessibilityState={{ selected: e === emoji }}
-              className={`h-11 w-11 items-center justify-center rounded-sm border-2 ${e === emoji ? 'border-edge bg-card' : 'border-transparent bg-field'}`}>
+              className={`h-11 w-11 items-center justify-center rounded-sm border-2 ${e === emoji ? 'border-ink bg-card' : 'border-transparent bg-field'}`}>
               <Text className="text-xl">{e}</Text>
             </Pressable>
           ))}
         </View>
       </View>
-      <Field label="Or type your own" value={isCustom ? emoji : ''} onChangeText={typeEmoji} placeholder="Switch to the emoji keyboard" />
+      <Field label="Or type your own" value={isCustom ? emoji : ''} onChangeText={typeEmoji} placeholder="Tap here, then use the emoji keyboard" />
 
       <View className="gap-2">
         <Label>Colour</Label>
@@ -92,24 +90,20 @@ function CategoryForm({ category }: { category: CategoryRecord | null }) {
               accessibilityRole="button"
               accessibilityLabel={c}
               accessibilityState={{ selected: c === color }}
-              className={`h-11 w-11 rounded-full border-2 ${CATEGORY_FILLS[c]} ${c === color ? 'border-edge' : 'border-transparent'}`}
+              className={`h-11 w-11 rounded-full border-2 ${CATEGORY_FILLS[c]} ${c === color ? 'border-ink' : 'border-transparent'}`}
             />
           ))}
         </View>
       </View>
 
-      <Chips label="What kind?" options={KINDS} value={kind} onChange={setKind} />
-      {kind === 'savings' || kind === 'income' ? (
-        <Text className="font-sans text-base leading-6 text-muted">
-          {kind === 'savings' ? 'Money you move to savings never counts as spending.' : 'Shows up when you log money coming in.'}
-        </Text>
-      ) : null}
+      <Chips label="What kind is it?" options={KINDS} value={kind} onChange={setKind} />
+      <Text className="font-sans text-base leading-6 text-muted">{KIND_GROUPS.find((g) => g.kind === kind)?.blurb}</Text>
 
-      {error ? <Text className="font-sans-medium text-base text-ink">Couldn&apos;t save: {error}</Text> : null}
+      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
       <Button label="Save" onPress={save} disabled={!valid} />
       {category ? (
         <>
-          <Text className="text-center font-sans text-sm text-muted">Deleting keeps your entries. They just lose the sticker.</Text>
+          <Text className="text-center font-sans text-sm text-muted">Anything you&apos;ve already logged stays. It just shows up as uncategorized.</Text>
           <Button label="Delete category" kind="plain" onPress={() => run(() => deleteCategory(db, category.id))} />
         </>
       ) : null}

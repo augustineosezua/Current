@@ -13,7 +13,7 @@ import { useLiveQuery } from '@/hooks/use-live-query';
 
 // one plain line describing the gap between the real and the calculated balance
 function driftLine(drift: number): string {
-  if (drift === 0) return 'Spot on. Nothing to fix.';
+  if (drift === 0) return 'That matches. All good.';
   return `That's ${formatMoney(Math.abs(drift))} ${drift < 0 ? 'less' : 'more'} than we had.`;
 }
 
@@ -41,18 +41,18 @@ function CheckInForm({ account }: { account: AccountRecord }) {
   return (
     <Sheet title="Check your balance">
       <Text className="font-sans text-base leading-6 text-muted">
-        We have {account.name} at <Text className="font-sans-bold text-ink">{formatMoney(account.balance)}</Text>. Open your
-        banking app and type what it really says.
+        We think {account.name} has <Text className="font-sans-bold text-ink">{formatMoney(account.balance)}</Text>. Check your
+        bank app and type in what it actually says.
       </Text>
       <AmountField label="Real balance" value={text} onChangeText={setText} autoFocus allowNegative />
       {drift !== null ? <Text className="font-sans-medium text-lg text-ink">{driftLine(drift)}</Text> : null}
-      {error ? <Text className="font-sans-medium text-base text-ink">Couldn&apos;t save: {error}</Text> : null}
+      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
       {drift === null || drift === 0 ? (
         <Button label="Confirm" onPress={() => confirm('update')} disabled={drift === null} />
       ) : (
         <>
-          <Button label="Log the difference as Uncategorized" onPress={() => confirm('log')} />
-          <Button label="Just update my balance" kind="secondary" onPress={() => confirm('update')} />
+          <Button label="Log the difference" onPress={() => confirm('log')} />
+          <Button label="Just fix the balance" kind="secondary" onPress={() => confirm('update')} />
         </>
       )}
     </Sheet>

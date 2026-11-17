@@ -27,23 +27,23 @@ async function loadForm(db: SQLiteDatabase, id: string | undefined): Promise<For
   return { account: accounts.find((a) => a.id === id) ?? null, count: accounts.length };
 }
 
-// add or edit an account; the balance is only typed here when the account is new
+// add or edit an account: name, type and balance
 function AccountForm({ account, count }: FormData) {
   const db = useSQLiteContext();
   const [name, setName] = useState(account?.name ?? '');
   const [type, setType] = useState<AccountType>(account?.type ?? 'chequing');
-  const [balanceText, setBalanceText] = useState('');
+  const [balanceText, setBalanceText] = useState(account ? (account.balance / 100).toFixed(2) : '');
   const [error, setError] = useState<string | null>(null);
 
   const balance = toCents(balanceText);
-  const valid = name.trim().length > 0 && (!!account || balance !== null);
+  const valid = name.trim().length > 0 && balance !== null;
 
-  // create with an opening balance, or update the name and type
+  // create with an opening balance, or update the name, type and balance
   const save = async () => {
-    if (!valid) return;
+    if (!valid || balance === null) return;
     try {
-      if (account) await updateAccount(db, account.id, { name: name.trim(), type });
-      else await createAccount(db, { name: name.trim(), type, balance: balance ?? 0 });
+      if (account) await updateAccount(db, account.id, { name: name.trim(), type, balance });
+      else await createAccount(db, { name: name.trim(), type, balance });
       router.back();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -62,10 +62,20 @@ function AccountForm({ account, count }: FormData) {
       <Field label="Name" value={name} onChangeText={setName} placeholder="Chequing" autoFocus={!account} />
       <Chips label="Type" options={TYPES} value={type} onChange={setType} />
       {type === 'savings' ? (
-        <Text className="font-sans text-base leading-6 text-muted">Savings never count towards your daily number.</Text>
+        <Text className="font-sans text-base leading-6 text-muted">Savings don&apos;t count toward your daily number.</Text>
       ) : null}
-      {account ? null : <AmountField label="What's in it right now?" value={balanceText} onChangeText={setBalanceText} allowNegative />}
-      {error ? <Text className="font-sans-medium text-base text-ink">Couldn&apos;t save: {error}</Text> : null}
+      <AmountField
+        label={account ? 'Balance' : "What's in it right now?"}
+        value={balanceText}
+        onChangeText={setBalanceText}
+        allowNegative
+      />
+      {account ? (
+        <Text className="font-sans text-base leading-6 text-muted">
+          Changing this just updates the number. It won&apos;t show up as spending.
+        </Text>
+      ) : null}
+      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
       <Button label="Save" onPress={save} disabled={!valid} />
       {account && count > 1 ? <Button label="Delete account" kind="plain" onPress={remove} /> : null}
     </Sheet>

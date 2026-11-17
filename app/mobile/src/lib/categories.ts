@@ -43,6 +43,14 @@ export const KIND_LABELS: Record<CategoryKind, string> = {
   income: 'Money in',
 };
 
+// the four groups on the Categories screen, in order, with what each one means in plain words
+export const KIND_GROUPS: readonly { kind: CategoryKind; title: string; blurb: string }[] = [
+  { kind: 'needs', title: 'Needs', blurb: 'Stuff you have to pay for, like rent, groceries and getting around.' },
+  { kind: 'wants', title: 'Wants', blurb: 'The fun stuff. Coffee, takeout, shopping, nights out.' },
+  { kind: 'savings', title: 'Savings', blurb: 'Money you move into savings. It never counts as spending.' },
+  { kind: 'income', title: 'Money in', blurb: 'Only shows up when you log money coming in, like a paycheque.' },
+];
+
 // emoji offered when making or editing a category
 export const CATEGORY_EMOJI = [
   '🛒', '🍔', '☕', '🚌', '🏠', '📚', '💊', '🎉', '🛍️', '📺', '🐷', '💸',

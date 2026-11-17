@@ -8,7 +8,7 @@ Chosen by Augustine on November 16, 2026 (ROADMAP 1.0b), from three directions m
 
 A budget that feels like a sticker book: warm paper, chunky type, and die-cut stickers for categories. It should feel friendly and a little handmade, never like a bank.
 
-**What sets it apart.** DaTrack and other trackers also give each category an emoji and a pastel colour. Current's difference is the **ink edge**: every sticker, card, the tab pill and the + button has a 2px ink outline and a hard 3px offset shadow with no blur (`components/raised.tsx`). Soft pastel apps have no edge at all. Keep this edge on anything new that sits on top of the page; drop it only for flat text rows inside a card.
+**Softened November 17, 2026.** Augustine found the original ink outline and hard offset shadow too brutalist, and asked for the look of direction A in the mockup canvas. Cards, the tab pill and the + button now sit on a soft ledge: a short 3px shadow plus a wide faint blur (`--color-ledge`, `--color-glow`, drawn in `components/raised.tsx`). Pressing one settles it 2px onto the ledge. Category stickers keep the die-cut look with a white edge (`--color-edge`) and a small ledge. Nothing gets a dark outline any more; a selected chip or swatch is marked with a 2px `ink` ring.
 
 ## Colour
 
@@ -21,7 +21,8 @@ All colour comes from tokens. Light and dark follow the system setting automatic
 | `field` | #EFE6DA | #352F2A | Inputs, round icon buttons |
 | `ink` | #2A2420 | #F6EFE6 | Main text |
 | `muted` | #6E625A | #B5A99C | Secondary text (AA on `bg` and `card`) |
-| `edge` | #2A2420 | #0B0A09 | Sticker outline and hard shadow |
+| `edge` | #FFFFFF | #3A332D | White die-cut edge around stickers |
+| `ledge` / `glow` | rgba(42,36,32,.10) / .08 | rgba(0,0,0,.35) / .30 | Soft shadow under cards: short ledge + wide blur |
 | `cta` / `on-cta` | #2A2420 / #FFF | #F6EFE6 / #1C1916 | Primary buttons |
 | `brand` / `on-brand` | #FF7A59 / #2A1008 | same | The + button, app icon, screenshots. Nowhere else. |
 
@@ -39,8 +40,8 @@ Zero is lilac, not red. Running out is never shown as an alarm.
 
 ## Type
 
-- **Display: Bricolage Grotesque** (800 `font-display`, 700 `font-display-bold`). The daily number, screen titles, section headings and big amounts.
-- **Body: DM Sans** (400 `font-sans`, 500 `font-sans-medium`, 700 `font-sans-bold`). Everything else.
+- **Display: Fredoka** (700 `font-display`, 600 `font-display-bold`). Rounded and playful. The daily number, screen titles, section headings and big amounts. Switched from Bricolage Grotesque on November 17, 2026, for a more playful feel.
+- **Body: Nunito** (500 `font-sans`, 600 `font-sans-medium`, 800 `font-sans-bold`). Rounded to match Fredoka, easy to read, with tabular figures for money. Everything else.
 - Money always uses `tabular-nums`, so digits don't shift while the number counts.
 - The daily number is `text-sts` (96px) in whole dollars, always rounded down (`formatMoneyWhole`), so it never shows more than is safe. It shrinks to fit rather than wrap.
 - Use the Tailwind text scale for everything else, and respect Dynamic Type (don't turn off font scaling).
@@ -74,20 +75,22 @@ Zero is lilac, not red. Running out is never shown as an alarm.
 
 ## Voice
 
-Short, casual, second person. Talk like a friend who's good with money, not a bank.
+Short, casual, second person. Talk like a friend who's good with money, not a bank, and not a chatbot. Say "semester", not "term" (UK copy keeps "term", since that's what students there say).
 
-- Comfortable: "You're in good shape. That's $92 until Friday."
-- Tight: "Tight, but it gets you to Friday. $24 in all."
-- Zero: "Nothing spare right now. About $310 frees up Fri, Nov 20."
-- Empty: "Nothing logged yet. Tap + to log your first purchase. It takes about three seconds."
+- Comfortable: "You're good. That's $92 to last you till Friday, Nov 20."
+- Tight: "Bit tight, but you'll make it to Friday, Nov 20. $24 total."
+- Zero: "Nothing spare right now. About $310 opens up Fri, Nov 20."
+- Empty: "Nothing logged yet. Hit + when you buy something. Takes about three seconds."
 
 Never joke about being short of money, never guilt ("you overspent again"), and never celebrate spending. Never use red for money states.
+
+Avoid the stuff that reads as machine-written: "X: Y" setups ("OSAP or co-op pay: money that..."), stiff verbs ("is set aside", "is funded", "released"), slogans ("keeps your number honest"), and lists of three for rhythm. If it sounds like a notice, rewrite it the way you'd text it.
 
 ## Limits
 
 - Safe-to-Spend stays the largest thing on Home.
-- The breakdown ("How it's calculated") and the monthly backup prompt on Home are flat `card` rows too, so nothing competes with the number.
-- A stale or failed number is shown plainly: a flat `card` row with plain text and one button ("Balance last checked 9 days ago", "Check now"). No sticker, tilt or mood colour on it.
+- The breakdown ("How we got this number") and the monthly backup prompt on Home are flat `card` rows too, so nothing competes with the number.
+- A stale or failed number is shown plainly: a flat `card` row with plain text and one button ("You haven't checked your balance in 9 days", "Check it"). No sticker, tilt or mood colour on it.
 - Text meets WCAG AA in both modes. Check new token pairs before adding them.
 - Art is emoji, SF Symbols and shapes drawn in code only. No illustrations, mascots or paid assets.
 - No streaks, points or other game mechanics.
@@ -95,3 +98,9 @@ Never joke about being short of money, never guilt ("you overspent again"), and 
 ## App icon and splash
 
 A mint sticker with two ink waves, tilted 8°. On coral in light mode; on near-black with a cream die-cut edge in dark mode (`assets/images/icon.png`, `icon-dark.png`). The splash is the sticker alone on `bg` (`splash-icon.png`). They are drawn by `scripts/make-icons.py` (needs Pillow): run `python scripts/make-icons.py assets/images` from `app/mobile` to regenerate them. Don't hand-edit the PNGs.
+
+## Liquid glass (added November 17, 2026)
+
+Only controls that float over content are glass: the tab pill, the + button (glass tinted `brand`) and the quick-add stack. Cards, sheets and stickers stay solid so money stays easy to read. Drawn by `components/glass.tsx`, which uses iOS 26 liquid glass and falls back to a solid `card` on the soft ledge on older systems.
+
+Quick add: tap + to log spending. Hold it for 250ms (half the iOS context-menu hold) to raise four sticker bubbles, nearest first: Money in, Bill, Goal, Semester money. A dim backdrop closes it, and the + turns into an ×. Keep it to four; payday and accounts live in Settings.

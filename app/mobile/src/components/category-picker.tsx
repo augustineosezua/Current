@@ -31,7 +31,7 @@ export function CategoryPicker({
               accessibilityRole="button"
               accessibilityLabel={c.name}
               accessibilityState={{ selected }}
-              className={`min-h-11 flex-row items-center gap-2 rounded-full border-2 px-4 ${selected ? `border-edge ${fillFor(c.color)}` : 'border-transparent bg-field'}`}>
+              className={`min-h-11 flex-row items-center gap-2 rounded-full border-2 px-4 ${selected ? `border-ink ${fillFor(c.color)}` : 'border-transparent bg-field active:opacity-70'}`}>
               <Text className="text-base">{c.emoji}</Text>
               <Text className={`text-base ${selected ? 'font-sans-bold text-on-brand' : 'font-sans-medium text-ink'}`}>{c.name}</Text>
             </Pressable>

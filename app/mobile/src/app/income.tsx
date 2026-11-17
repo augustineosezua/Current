@@ -52,9 +52,9 @@ function IncomeForm({ income }: { income: IncomeRecord | null }) {
       <Chips label="How often?" options={FREQUENCIES} value={frequency} onChange={setFrequency} />
       <DateField label="Next payday" value={date} onChange={setDate} />
       <Text className="font-sans text-base leading-6 text-muted">
-        We never add this to your balance for you. Log it with + when it lands.
+        This doesn&apos;t get added to your balance on its own. Log it with + when it comes in.
       </Text>
-      {error ? <Text className="font-sans-medium text-base text-ink">Couldn&apos;t save: {error}</Text> : null}
+      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
       <Button label="Save" onPress={save} disabled={!valid} />
       {income ? <Button label="Delete payday" kind="plain" onPress={() => run(() => deleteIncome(db, income.id))} /> : null}
     </Sheet>

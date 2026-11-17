@@ -129,7 +129,7 @@ An Expo app in `app/mobile`, local-only on expo-sqlite, calling `core` for every
 - [x] **1.6 Term plans.** `termPlan {name, amount, startDate, endDate, isActive}`, e.g. "Winter OSAP, $4,000, Jan 6 to Apr 30". STS subtracts the straight-line reserve for future weeks. A card shows "$X released so far, $Y/week, lasts until Apr 30". The preset label on the create screen follows the storefront (OSAP, financial aid refund, maintenance loan). Free users get one active term plan.
 - [x] **1.7 Reminders (local notifications).** Bill due in 3 days, a Sunday summary (spent vs last week, top 3 categories, current daily STS), and "check your balance" when the last check-in is over 7 days old. Separate toggles for each, and never more than one notification a day. No email.
 - [x] **1.8 Current-period summary.** Spending by category for the current period and a one-line like-for-like comparison ("12% less than this point last paycheque": day 10 compared to day 10). History and charts beyond the current period are Plus (2.8).
-- [x] **1.9 Bills, goals and export.** Bills list with overdue first. Savings goals with priority reorder and manual allocate, two goals on Free. CSV export of all transactions, plus a monthly "back up now" prompt and clear copy that data is included in iCloud device backups.
+- [x] **1.9 Bills, goals and export.** Bills list with overdue first. Savings goals with priority reorder and manual allocate, three goals on Free. CSV export of all transactions, plus a monthly "back up now" prompt and clear copy that data is included in iCloud device backups.
 
 ## Phase 2: Plus and launch (M2, Mar 1 to Apr 15, 2027)
 
@@ -207,7 +207,7 @@ Removed from this roadmap: G.3 referral credits, G.5 lifecycle emails, G.6 campu
 | | Category budgets, Needs/Wants, 90% and 100% alerts, rollover |
 | Bills with reminders | Insights and comparisons beyond the current period |
 | One term plan | Unlimited term plans |
-| Two savings goals | Unlimited goals, spend/withdraw from goals |
+| Three savings goals | Unlimited goals, spend/withdraw from goals |
 | Categories with suggestions from history | CSV/OFX import |
 | Current-period spending summary | Home-screen widget |
 | CSV export, French | Themes and app icons |

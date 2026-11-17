@@ -51,26 +51,26 @@ function TermPlanForm({ plan }: { plan: TermPlanRecord | null }) {
     });
 
   return (
-    <Sheet title={plan ? 'Edit term money' : 'Add term money'}>
+    <Sheet title={plan ? 'Edit semester money' : 'Add semester money'}>
       <Text className="font-sans text-base leading-6 text-muted">{preset.hint}</Text>
       <Field label="What is it?" value={name} onChangeText={setName} placeholder={preset.name} />
       <AmountField label="How much?" value={amountText} onChangeText={setAmountText} autoFocus={!plan} />
-      <DateField label="It has to last from" value={startDate} onChange={setStartDate} />
-      <DateField label="Until" value={endDate} onChange={setEndDate} />
+      <DateField label="Starts" value={startDate} onChange={setStartDate} />
+      <DateField label="Has to last until" value={endDate} onChange={setEndDate} />
       {startDate && endDate && !ordered ? (
-        <Text className="font-sans-medium text-base text-ink">The last day has to come after the first.</Text>
+        <Text className="font-sans-medium text-base text-ink">The end date needs to be after the start.</Text>
       ) : null}
       {preview ? (
         <Text className="font-sans-medium text-base leading-6 text-ink">
-          That&apos;s about {formatMoney(preview.perWeek)} a week until {monthDayLabel(preview.endDate)}.
+          That works out to about {formatMoney(preview.perWeek)} a week till {monthDayLabel(preview.endDate)}.
         </Text>
       ) : null}
       <Text className="font-sans text-base leading-6 text-muted">
-        Count it in your balance once it lands. We hold back the part meant for later weeks.
+        Once it hits your account, include it in your balance. We&apos;ll hold back the part that&apos;s for later weeks.
       </Text>
-      {error ? <Text className="font-sans-medium text-base text-ink">Couldn&apos;t save: {error}</Text> : null}
+      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
       <Button label="Save" onPress={save} disabled={!valid} />
-      {plan ? <Button label="Delete term money" kind="plain" onPress={() => run(() => deleteTermPlan(db, plan.id))} /> : null}
+      {plan ? <Button label="Delete semester money" kind="plain" onPress={() => run(() => deleteTermPlan(db, plan.id))} /> : null}
     </Sheet>
   );
 }

@@ -1,5 +1,7 @@
 import { createContext, use, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import Animated, { FadeInDown, FadeOutDown, ReduceMotion } from 'react-native-reanimated';
+import { useCSSVariable } from 'uniwind';
 
 const VISIBLE_MS = 5000;
 
@@ -19,6 +21,7 @@ export function useToast(): (toast: ToastOptions) => void {
 // holds the current toast and draws it above the tab bar
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<(ToastOptions & { key: number }) | null>(null);
+  const glow = useCSSVariable('--color-glow') as string;
   const show = useCallback((next: ToastOptions) => setToast({ ...next, key: Date.now() }), []);
 
   // hide after a few seconds; a newer toast restarts the clock
@@ -33,22 +36,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {toast ? (
         <View pointerEvents="box-none" className="absolute bottom-32 left-5 right-5 items-center">
-          <View
-            accessibilityLiveRegion="polite"
-            className="min-h-12 flex-row items-center gap-4 rounded-full border-2 border-edge bg-cta px-5 py-2">
-            <Text className="shrink font-sans-medium text-base text-on-cta">{toast.message}</Text>
-            {toast.actionLabel ? (
-              <Pressable
-                onPress={() => {
-                  toast.onAction?.();
-                  setToast(null);
-                }}
-                accessibilityRole="button"
-                hitSlop={12}>
-                <Text className="font-sans-bold text-base text-on-cta underline">{toast.actionLabel}</Text>
-              </Pressable>
-            ) : null}
-          </View>
+          {/* springs up from the tab bar, drops away when done */}
+          <Animated.View
+            key={toast.key}
+            entering={FadeInDown.springify().damping(16).reduceMotion(ReduceMotion.System)}
+            exiting={FadeOutDown.duration(180).reduceMotion(ReduceMotion.System)}>
+            <View
+              accessibilityLiveRegion="polite"
+              style={{ boxShadow: `0 8px 24px ${glow}` }}
+              className="min-h-12 flex-row items-center gap-4 rounded-full bg-cta px-5 py-2">
+              <Text className="shrink font-sans-medium text-base text-on-cta">{toast.message}</Text>
+              {toast.actionLabel ? (
+                <Pressable
+                  onPress={() => {
+                    toast.onAction?.();
+                    setToast(null);
+                  }}
+                  accessibilityRole="button"
+                  hitSlop={12}>
+                  <Text className="font-sans-bold text-base text-on-cta underline">{toast.actionLabel}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </Animated.View>
         </View>
       ) : null}
     </ToastContext>

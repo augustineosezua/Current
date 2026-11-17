@@ -3,6 +3,7 @@ import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { PeriodSummary } from '@/components/period-summary';
+import { Row } from '@/components/motion';
 import { Raised } from '@/components/raised';
 import { EmptyState, Screen } from '@/components/screen';
 import { Sticker } from '@/components/sticker';
@@ -73,7 +74,7 @@ export default function ActivityScreen() {
   if (error) {
     return (
       <Screen title="Activity">
-        <EmptyState title="Couldn't load your activity" body={error.message} />
+        <EmptyState title="Couldn't load your spending" body={error.message} />
       </Screen>
     );
   }
@@ -97,30 +98,31 @@ export default function ActivityScreen() {
             { emoji: '🛒', fill: 'bg-cat-mint', tilt: -1 },
           ]}
           title="Nothing logged yet"
-          body="Tap + to log your first purchase. It takes about three seconds."
+          body="Hit + when you buy something. Takes about three seconds."
         />
       ) : (
         <PeriodSummary input={input} result={result} />
       )}
-      {data.transactions.length === 0 ? null : (
-        groupByDay(data.transactions).map((group) => (
-          <View key={group.key} className="gap-2">
-            <Text className="font-sans-bold text-sm text-muted">{dayLabel(group.date)}</Text>
-            <Raised>
-              <View className="py-1">
-                {group.items.map((t) => (
-                  <TransactionRow
-                    key={t.id}
-                    transaction={t}
-                    category={(t.categoryId && data.categories.get(t.categoryId)) || null}
-                    accountName={showAccounts && t.accountId ? (data.accountNames.get(t.accountId) ?? null) : null}
-                  />
-                ))}
-              </View>
-            </Raised>
-          </View>
-        ))
-      )}
+      {data.transactions.length === 0
+        ? null
+        : groupByDay(data.transactions).map((group) => (
+            <View key={group.key} className="gap-2">
+              <Text className="font-sans-bold text-sm text-muted">{dayLabel(group.date)}</Text>
+              <Raised>
+                <View className="py-1">
+                  {group.items.map((t) => (
+                    <Row key={t.id}>
+                      <TransactionRow
+                        transaction={t}
+                        category={(t.categoryId && data.categories.get(t.categoryId)) || null}
+                        accountName={showAccounts && t.accountId ? (data.accountNames.get(t.accountId) ?? null) : null}
+                      />
+                    </Row>
+                  ))}
+                </View>
+              </Raised>
+            </View>
+          ))}
     </Screen>
   );
 }

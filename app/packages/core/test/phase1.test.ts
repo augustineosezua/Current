@@ -208,10 +208,10 @@ describe("free limits", () => {
     expect(canAddTermPlan([termPlan()], now, true)).toBe(true);
   });
 
-  it("allows two unfinished goals", () => {
-    expect(canAddGoal([goal()])).toBe(true);
-    expect(canAddGoal([goal(), goal({ id: "g2" })])).toBe(false);
-    expect(canAddGoal([goal(), goal({ id: "g2", isCompleted: true })])).toBe(true);
+  it("allows three unfinished goals", () => {
+    expect(canAddGoal([goal(), goal({ id: "g2" })])).toBe(true);
+    expect(canAddGoal([goal(), goal({ id: "g2" }), goal({ id: "g3" })])).toBe(false);
+    expect(canAddGoal([goal(), goal({ id: "g2" }), goal({ id: "g3", isCompleted: true })])).toBe(true);
   });
 });
 

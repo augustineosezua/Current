@@ -19,6 +19,7 @@ import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/form';
 import { MoveButton } from '@/components/move-button';
+import { Pop, Row } from '@/components/motion';
 import { Raised } from '@/components/raised';
 import { EmptyState, Screen } from '@/components/screen';
 import { useToast } from '@/components/toast';
@@ -57,7 +58,7 @@ function BillRow({ bill, now }: { bill: BillRecord; now: Date }) {
     if (!paid) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     toast({
-      message: `Logged ${formatMoney(paid.amount)} from ${paid.name}`,
+      message: `Paid ${paid.name}, ${formatMoney(paid.amount)} logged`,
       actionLabel: 'Undo',
       onAction: () => void markBillUnpaid(db, bill.id),
     });
@@ -85,8 +86,10 @@ function BillRow({ bill, now }: { bill: BillRecord; now: Date }) {
         onPress={toggle}
         accessibilityRole="button"
         accessibilityLabel={bill.isPaid ? `Mark ${bill.name} unpaid` : `Mark ${bill.name} paid`}
-        className={`h-11 w-11 items-center justify-center rounded-full border-2 border-edge ${bill.isPaid ? 'bg-cta' : 'bg-card'}`}>
-        <SymbolView name="checkmark" size={16} weight="bold" tintColor={bill.isPaid ? onCta : ink} />
+        className={`h-11 w-11 items-center justify-center rounded-full border-2 ${bill.isPaid ? 'border-transparent bg-cta' : 'border-field bg-card'}`}>
+        <Pop trigger={bill.isPaid} enabled={bill.isPaid} to={1.5}>
+          <SymbolView name="checkmark" size={16} weight="bold" tintColor={bill.isPaid ? onCta : ink} />
+        </Pop>
       </Pressable>
     </View>
   );
@@ -98,19 +101,23 @@ function TermPlanCard({ plan, now }: { plan: TermPlanRecord; now: Date }) {
   const ended = !isTermPlanCurrent(plan, now);
   const line = ended
     ? `Ended ${monthDayLabel(summary.endDate)}`
-    : `${formatMoney(summary.released)} released so far, ${formatMoney(summary.perWeek)}/week, lasts until ${monthDayLabel(summary.endDate)}`;
+    : `${formatMoney(summary.perWeek)} a week · ${formatMoney(summary.released)} unlocked so far · lasts till ${monthDayLabel(summary.endDate)}`;
   return (
     <Link href={{ pathname: '/term-plan', params: { id: plan.id } }} asChild>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${plan.name}, ${formatMoney(plan.amount)}. ${line}. Edit`} className="active:opacity-80">
-        <Raised>
-          <View className="gap-1 p-5">
-            <View className="flex-row items-baseline justify-between gap-3">
-              <Text className={`shrink font-display-bold text-xl ${ended ? 'text-muted' : 'text-ink'}`}>{plan.name}</Text>
-              <Text className={`font-display text-2xl tabular-nums ${ended ? 'text-muted' : 'text-ink'}`}>{formatMoney(plan.amount)}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${plan.name}, ${formatMoney(plan.amount)}. ${line}. Edit`}>
+        {({ pressed }) => (
+          <Raised pressed={pressed}>
+            <View className="gap-1 p-5">
+              <View className="flex-row items-baseline justify-between gap-3">
+                <Text className={`shrink font-display-bold text-xl ${ended ? 'text-muted' : 'text-ink'}`}>{plan.name}</Text>
+                <Text className={`font-display text-2xl tabular-nums ${ended ? 'text-muted' : 'text-ink'}`}>
+                  {formatMoney(plan.amount)}
+                </Text>
+              </View>
+              <Text className="font-sans text-base leading-6 text-muted">{line}</Text>
             </View>
-            <Text className="font-sans text-base leading-6 text-muted">{line}</Text>
-          </View>
-        </Raised>
+          </Raised>
+        )}
       </Pressable>
     </Link>
   );
@@ -134,9 +141,9 @@ function GoalRow({
   const db = useSQLiteContext();
   const progress = `${formatMoney(goal.amountSaved)} of ${formatMoney(goal.amount)}`;
   const detail = goal.isCompleted
-    ? 'Fully saved'
+    ? 'All saved up'
     : thisPeriod
-      ? `${formatMoney(thisPeriod)} held back this ${periodNoun} · by ${monthDayLabel(goal.dueDate)}`
+      ? `${formatMoney(thisPeriod)} set aside this ${periodNoun} · by ${monthDayLabel(goal.dueDate)}`
       : `By ${monthDayLabel(goal.dueDate)}`;
   return (
     <View className="min-h-16 flex-row items-center gap-1 py-2 pl-4 pr-2">
@@ -182,36 +189,38 @@ export default function PlanScreen() {
             { emoji: '📱', fill: 'bg-cat-sky', tilt: 1 },
           ]}
           title="No bills yet"
-          body="Add rent, your phone and subscriptions so they're set aside before your daily number."
+          body="Rent, your phone plan, Spotify, whatever you pay regularly. We take these out before working out your daily number."
         />
       ) : (
         <Raised>
           <View className="py-1">
             {bills.map((b) => (
-              <BillRow key={b.id} bill={b} now={now} />
+              <Row key={b.id}>
+                <BillRow bill={b} now={now} />
+              </Row>
             ))}
           </View>
         </Raised>
       )}
       <Button label="Add a bill" kind="secondary" onPress={() => router.push('/bill')} />
 
-      <Text className="font-display-bold text-xl text-ink">Term money</Text>
+      <Text className="font-display-bold text-xl text-ink">Semester money</Text>
       {termPlans.length === 0 ? (
         <EmptyState
           stickers={[
             { emoji: '🎓', fill: 'bg-cat-lavender', tilt: -1 },
             { emoji: '🗓️', fill: 'bg-cat-butter', tilt: 2 },
           ]}
-          title="Got a lump sum for the term?"
-          body="Add it and we'll spread it over the weeks it has to last, so it's still there in April."
+          title="Got a lump sum for the semester?"
+          body="Add it and we'll spread it out week by week so it lasts the whole semester."
         />
       ) : (
         termPlans.map((p) => <TermPlanCard key={p.id} plan={p} now={now} />)
       )}
       {canAddTermPlan(termPlans, now) ? (
-        <Button label="Add term money" kind="secondary" onPress={() => router.push('/term-plan')} />
+        <Button label="Add semester money" kind="secondary" onPress={() => router.push('/term-plan')} />
       ) : (
-        <Text className="text-center font-sans text-sm text-muted">One lot of term money at a time for now.</Text>
+        <Text className="text-center font-sans text-sm text-muted">You can have one semester plan going at a time.</Text>
       )}
 
       <Text className="font-display-bold text-xl text-ink">Goals</Text>
@@ -223,33 +232,32 @@ export default function PlanScreen() {
             { emoji: '💻', fill: 'bg-cat-lilac', tilt: 2 },
           ]}
           title="Nothing saved for yet"
-          body="A trip, a laptop, or just a cushion? Add it and we'll hold a little back every paycheque."
+          body="Saving up for a trip, a laptop, or just a cushion? Add it and we'll put a bit aside every paycheque."
         />
       ) : (
         <>
           <Raised>
             <View className="py-1">
               {goals.map((g, i) => (
-                <GoalRow
-                  key={g.id}
-                  goal={g}
-                  thisPeriod={heldBack.get(g.id) ?? null}
-                  periodNoun={periodNoun}
-                  isFirst={i === 0}
-                  isLast={i === goals.length - 1}
-                />
+                <Row key={g.id}>
+                  <GoalRow
+                    goal={g}
+                    thisPeriod={heldBack.get(g.id) ?? null}
+                    periodNoun={periodNoun}
+                    isFirst={i === 0}
+                    isLast={i === goals.length - 1}
+                  />
+                </Row>
               ))}
             </View>
           </Raised>
-          {goals.length > 1 ? (
-            <Text className="text-center font-sans text-sm text-muted">The goal at the top is funded first.</Text>
-          ) : null}
+          {goals.length > 1 ? <Text className="text-center font-sans text-sm text-muted">We fill up the top goal first.</Text> : null}
         </>
       )}
       {canAddGoal(goals) ? (
         <Button label="Add a goal" kind="secondary" onPress={() => router.push('/goal')} />
       ) : (
-        <Text className="text-center font-sans text-sm text-muted">Two goals at a time for now.</Text>
+        <Text className="text-center font-sans text-sm text-muted">You can have three goals going at once.</Text>
       )}
     </Screen>
   );

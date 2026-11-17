@@ -1,17 +1,18 @@
-import { calculateSafeToSpend, type StsResult } from '@current/core';
+import { calculateSafeToSpend, type PeriodSettings, type StsResult } from '@current/core';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { useLiveQuery } from '@/hooks/use-live-query';
 
-import type {
-  AccountRecord,
-  BillRecord,
-  CategoryRecord,
-  GoalRecord,
-  IncomeRecord,
-  Settings,
-  TermPlanRecord,
-  TransactionRecord,
+import {
+  fromDateString,
+  type AccountRecord,
+  type BillRecord,
+  type CategoryRecord,
+  type GoalRecord,
+  type IncomeRecord,
+  type Settings,
+  type TermPlanRecord,
+  type TransactionRecord,
 } from './records';
 import * as repo from './repo';
 
@@ -24,7 +25,8 @@ export interface BudgetData {
   termPlans: TermPlanRecord[];
   transactions: TransactionRecord[];
   categories: CategoryRecord[];
-  settings: Settings;
+  // stored settings, plus the picked end date as the Date core reads
+  settings: Settings & PeriodSettings;
 }
 
 // read every table core needs; core does the math, nothing is written back
@@ -39,7 +41,8 @@ export async function loadStsInput(db: SQLiteDatabase): Promise<BudgetData> {
     repo.categories.list(db),
     repo.getSettings(db),
   ]);
-  return { accounts, bills, goals, incomes, termPlans, transactions, categories, settings };
+  const periodEndOverride = settings.budgetEndsOn ? fromDateString(settings.budgetEndsOn) : null;
+  return { accounts, bills, goals, incomes, termPlans, transactions, categories, settings: { ...settings, periodEndOverride } };
 }
 
 // the data plus the number computed from it, so a screen never shows one without the other

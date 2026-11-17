@@ -47,6 +47,8 @@ export interface Settings {
   reminders: ReminderSettings;
   // ISO time of the last CSV export or dismissed backup prompt
   backupNudgedAt: string | null;
+  // 'YYYY-MM-DD' the user picked for the current budget to end, or null; ignored once it has passed
+  budgetEndsOn: string | null;
 }
 export const DEFAULT_SETTINGS: Settings = {
   budgetPeriod: null,
@@ -54,6 +56,7 @@ export const DEFAULT_SETTINGS: Settings = {
   onboarded: false,
   reminders: { bills: true, summary: true, checkIn: true },
   backupNudgedAt: null,
+  budgetEndsOn: null,
 };
 export type SettingKey = keyof Settings;
 

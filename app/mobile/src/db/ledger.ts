@@ -93,7 +93,7 @@ export function addTransaction(db: SQLiteDatabase, input: TransactionInput): Pro
 export function editTransaction(db: SQLiteDatabase, id: string, changes: Partial<TransactionInput>): Promise<void> {
   return write(db, async () => {
     const existing = await repo.transactions.get(db, id);
-    if (!existing) throw new Error('That transaction no longer exists.');
+    if (!existing) throw new Error('That entry is gone.');
     const accountId = changes.accountId === undefined ? existing.accountId : (changes.accountId ?? undefined);
     const amount = changes.amount ?? existing.amount;
     await adjustBalance(db, existing.accountId, existing.amount);
@@ -126,9 +126,23 @@ export function createAccount(
   });
 }
 
-// rename or retype an account
-export function updateAccount(db: SQLiteDatabase, id: string, changes: { name?: string; type?: AccountType }): Promise<void> {
-  return write(db, () => repo.accounts.update(db, id, changes));
+// change an account's name, type or balance; a new balance is the user telling us the real number, so it counts as a check-in
+export function updateAccount(
+  db: SQLiteDatabase,
+  id: string,
+  changes: { name?: string; type?: AccountType; balance?: Cents },
+  now = new Date(),
+): Promise<void> {
+  return write(db, async () => {
+    const account = await repo.accounts.get(db, id);
+    if (!account) throw new Error('That account is gone.');
+    const { balance, ...rest } = changes;
+    const balanceChanged = balance !== undefined && balance !== account.balance;
+    await repo.accounts.update(db, id, {
+      ...rest,
+      ...(balanceChanged ? { balance: assertCents(balance, 'balance'), lastCheckInAt: now } : {}),
+    });
+  });
 }
 
 // remove an account; its transactions stay in the history
@@ -148,7 +162,7 @@ export function checkInBalance(
 ): Promise<{ drift: Cents }> {
   return write(db, async () => {
     const account = await repo.accounts.get(db, accountId);
-    if (!account) throw new Error('That account no longer exists.');
+    if (!account) throw new Error('That account is gone.');
     const drift = getBalanceDrift(account.balance, entered);
 
     // logging the difference moves the balance to the entered amount through the transaction

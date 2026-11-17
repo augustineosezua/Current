@@ -62,7 +62,7 @@ function GoalForm({ goal, hasSavingsAccount }: FormData) {
       const moved = await allocateToGoal(db, goal.id, aside);
       if (moved === 0) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      toast({ message: `Set aside ${formatMoney(moved)} for ${goal.name}` });
+      toast({ message: `Added ${formatMoney(moved)} to ${goal.name}` });
     });
 
   return (
@@ -70,20 +70,20 @@ function GoalForm({ goal, hasSavingsAccount }: FormData) {
       <Field label="What's it for?" value={name} onChangeText={setName} placeholder="Laptop" autoFocus={!goal} />
       <AmountField label="How much?" value={amountText} onChangeText={setAmountText} />
       <DateField label="By when?" value={dueDate} onChange={setDueDate} />
-      {error ? <Text className="font-sans-medium text-base text-ink">Couldn&apos;t save: {error}</Text> : null}
+      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
       <Button label="Save" onPress={save} disabled={!valid} />
 
       {goal && !goal.isCompleted ? (
         <View className="gap-5 border-t-2 border-field pt-5">
-          <Text className="font-display-bold text-xl text-ink">Set money aside</Text>
+          <Text className="font-display-bold text-xl text-ink">Put money in</Text>
           <Text className="font-sans text-base leading-6 text-muted">
             {formatMoney(goal.amountSaved)} of {formatMoney(goal.amount)} so far.{' '}
             {hasSavingsAccount
-              ? 'Move it to savings in your banking app, then log it here.'
-              : 'Move it somewhere you won’t spend it, then log it here. It comes out of your balance.'}
+              ? 'Move it to savings in your bank app, then log it here.'
+              : 'Put it somewhere you won’t spend it, then log it here. It comes out of your balance.'}
           </Text>
           <AmountField label="How much now?" value={asideText} onChangeText={setAsideText} />
-          <Button label="Set it aside" kind="secondary" onPress={setAside} disabled={aside === null || aside <= 0} />
+          <Button label="Add it" kind="secondary" onPress={setAside} disabled={aside === null || aside <= 0} />
         </View>
       ) : null}
       {goal ? <Button label="Delete goal" kind="plain" onPress={() => run(() => deleteGoal(db, goal.id))} /> : null}

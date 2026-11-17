@@ -83,9 +83,9 @@ export default function OnboardingScreen() {
 
           {step === 0 ? (
             <>
-              <Text className="font-display text-4xl text-ink">What can you spend right now?</Text>
+              <Text className="font-display text-4xl text-ink">How much is in your account?</Text>
               <Text className="font-sans text-base leading-6 text-muted">
-                Your chequing balance, roughly. You can correct it any time, and it stays on your phone.
+                Ballpark is fine, you can fix it later. It stays on your phone.
               </Text>
               <AmountField label="Balance" value={balanceText} onChangeText={setBalanceText} autoFocus allowNegative />
               <Button label="Next" onPress={() => setStep(1)} disabled={balance === null} />
@@ -94,16 +94,16 @@ export default function OnboardingScreen() {
 
           {step === 1 ? (
             <>
-              <Text className="font-display text-4xl text-ink">When are you paid next?</Text>
+              <Text className="font-display text-4xl text-ink">When&apos;s your next payday?</Text>
               <Text className="font-sans text-base leading-6 text-muted">
-                A job, an allowance, anything regular. We&apos;ll budget from one payday to the next.
+                Job, allowance, anything that comes in regularly. Your budget runs from one payday to the next.
               </Text>
               <AmountField label="How much?" value={payText} onChangeText={setPayText} autoFocus />
               <Chips label="How often?" options={PAY_FREQUENCIES} value={payFrequency} onChange={setPayFrequency} />
               <DateField label="Next payday" value={payDate} onChange={setPayDate} />
               <Button label="Next" onPress={() => setStep(2)} disabled={!hasIncome} />
               <Button
-                label="Skip, no regular income"
+                label="Skip, I don't get paid regularly"
                 kind="plain"
                 onPress={() => {
                   setPayText('');
@@ -117,7 +117,7 @@ export default function OnboardingScreen() {
             <>
               <Text className="font-display text-4xl text-ink">Any bills coming up?</Text>
               <Text className="font-sans text-base leading-6 text-muted">
-                Rent, phone, subscriptions. They&apos;re set aside before your daily number.
+                Rent, phone, subscriptions. We take these out first so your daily number is real.
               </Text>
               {bills.map((b, i) => (
                 <View key={i} className="flex-row items-center justify-between rounded-md bg-card p-4">
@@ -132,8 +132,8 @@ export default function OnboardingScreen() {
               <DateField label="Next due" value={billDue} onChange={setBillDue} />
               <Chips label="Repeats" options={BILL_REPEATS} value={billRepeats} onChange={setBillRepeats} />
               <Button label="Add another bill" kind="secondary" onPress={addBill} disabled={!draftBill} />
-              {error ? <Text className="font-sans-medium text-base text-ink">Couldn&apos;t save: {error}</Text> : null}
-              <Button label="Show my number" onPress={finish} />
+              {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
+              <Button label="Show me my number" onPress={finish} />
             </>
           ) : null}
 

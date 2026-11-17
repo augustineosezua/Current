@@ -13,9 +13,13 @@ import { saveSetting } from '@/db/plan';
 import { useSafeToSpend } from '@/db/sts';
 import { isBackupDue } from '@/lib/backup';
 import { exportTransactions } from '@/lib/export';
-import { monthDayLabel, weekdayLabel } from '@/lib/format';
+import { monthDayLabel, untilLabel } from '@/lib/format';
 
-const today = new Intl.DateTimeFormat('en-CA', { weekday: 'long', month: 'short', day: 'numeric' });
+const today = new Intl.DateTimeFormat('en-CA', {
+  weekday: 'long',
+  month: 'short',
+  day: 'numeric',
+});
 
 // date on the left, settings on the right
 function HomeHeader() {
@@ -24,7 +28,10 @@ function HomeHeader() {
     <View className="flex-row items-center justify-between">
       <Text className="font-sans-medium text-base text-muted">{today.format(new Date())}</Text>
       <Link href="/settings" asChild>
-        <Pressable accessibilityRole="button" accessibilityLabel="Settings" className="h-11 w-11 items-center justify-center rounded-full bg-field">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          className="h-11 w-11 items-center justify-center rounded-full bg-field">
           <SymbolView name="gearshape" size={20} tintColor={ink} />
         </Pressable>
       </Link>
@@ -36,8 +43,8 @@ function HomeHeader() {
 function StaleBalanceRow({ days, accountId }: { days: number; accountId: string }) {
   return (
     <View className="gap-3 rounded-md bg-card p-4">
-      <Text className="font-sans-medium text-base text-ink">Balance last checked {days} days ago</Text>
-      <Button label="Check now" kind="secondary" onPress={() => router.push({ pathname: '/check-in', params: { id: accountId } })} />
+      <Text className="font-sans-medium text-base text-ink">You haven&apos;t checked your balance in {days} days</Text>
+      <Button label="Check it" kind="secondary" onPress={() => router.push({ pathname: '/check-in', params: { id: accountId } })} />
     </View>
   );
 }
@@ -69,25 +76,32 @@ function Breakdown({ result }: { result: StsResult }) {
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         className="min-h-13 flex-row items-center justify-between p-4 active:opacity-70">
-        <Text className="font-sans-medium text-base text-muted">How it&apos;s calculated</Text>
+        <Text className="font-sans-medium text-base text-muted">How we got this number</Text>
         <SymbolView name={open ? 'chevron.up' : 'chevron.down'} size={14} weight="semibold" tintColor={ink} />
       </Pressable>
       {open ? (
         <View className="gap-2 px-4 pb-4">
           <BreakdownRow label="In your accounts" amount={formatMoney(b.spendableBalance)} />
-          {b.billsTotal > 0 ? <BreakdownRow label={`Bills due by ${monthDayLabel(result.billsCutoff)}`} amount={minus(b.billsTotal)} /> : null}
-          {b.termReserve > 0 ? <BreakdownRow label="Term money for later weeks" amount={minus(b.termReserve)} /> : null}
-          {b.committedGoals > 0 ? <BreakdownRow label="Held back for goals" amount={minus(b.committedGoals)} /> : null}
+          {b.billsTotal > 0 ? (
+            <BreakdownRow label={`Bills due by ${monthDayLabel(result.billsCutoff)}`} amount={minus(b.billsTotal)} />
+          ) : null}
+          {b.termReserve > 0 ? <BreakdownRow label="Semester money for later" amount={minus(b.termReserve)} /> : null}
+          {b.committedGoals > 0 ? <BreakdownRow label="Saving for goals" amount={minus(b.committedGoals)} /> : null}
           <BreakdownRow label="Safe to spend" amount={formatMoney(result.safeToSpend)} strong />
           {releasing > 0 ? (
-            <BreakdownRow label={`Term money freeing up by ${monthDayLabel(result.daily.periodEnd)}`} amount={`+${formatMoney(releasing)}`} />
+            <BreakdownRow
+              label={`Semester money unlocking by ${monthDayLabel(result.daily.periodEnd)}`}
+              amount={`+${formatMoney(releasing)}`}
+            />
           ) : null}
           <BreakdownRow
-            label={`Over ${days} ${days === 1 ? 'day' : 'days'}, until ${weekdayLabel(result.daily.periodEnd)} ${monthDayLabel(result.daily.periodEnd)}`}
+            label={`Over ${days} ${days === 1 ? 'day' : 'days'}, until ${untilLabel(result.daily.periodEnd)}`}
             amount={`${formatMoney(result.daily.perDay)}/day`}
             strong
           />
-          <Text className="font-sans text-sm leading-5 text-muted">Savings accounts never count. Bills already paid are already out of your balance.</Text>
+          <Text className="font-sans text-sm leading-5 text-muted">
+            Your savings aren&apos;t counted here. Bills you&apos;ve paid are already gone from your balance.
+          </Text>
         </View>
       ) : null}
     </View>
@@ -100,12 +114,20 @@ function BackupRow() {
   const done = () => void saveSetting(db, 'backupNudgedAt', new Date().toISOString());
   return (
     <View className="gap-3 rounded-md bg-card p-4">
-      <Text className="font-sans-medium text-base text-ink">Back up now?</Text>
+      <Text className="font-sans-medium text-base text-ink">Want to save a copy?</Text>
       <Text className="font-sans text-base leading-6 text-muted">
-        Your budget lives on this phone and is included in iCloud device backups. A CSV copy takes a few seconds.
+        Your budget lives on this phone and gets backed up with it to iCloud. Exporting a CSV takes a sec too.
       </Text>
-      <Button label="Export a copy" kind="secondary" onPress={() => void exportTransactions(db).then(done).catch(() => {})} />
-      <Button label="Not now" kind="plain" onPress={done} />
+      <Button
+        label="Export"
+        kind="secondary"
+        onPress={() =>
+          void exportTransactions(db)
+            .then(done)
+            .catch(() => {})
+        }
+      />
+      <Button label="Later" kind="plain" onPress={done} />
     </View>
   );
 }

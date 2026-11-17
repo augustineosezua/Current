@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 @import 'uniwind';
 
-/* Sticker Book design tokens. Source of truth: app/mobile/DESIGN.md */
+/* Sticker Book design tokens (soft version, Nov 2026). Source of truth: app/mobile/DESIGN.md */
 
 /* tokens that are the same in light and dark */
 @theme static {
@@ -27,12 +27,13 @@
   --radius-md: 20px;
   --radius-lg: 28px;
 
-  /* names must match the families loaded by useFonts in _layout.tsx */
-  --font-display: 'BricolageGrotesque_800ExtraBold';
-  --font-display-bold: 'BricolageGrotesque_700Bold';
-  --font-sans: 'DMSans_400Regular';
-  --font-sans-medium: 'DMSans_500Medium';
-  --font-sans-bold: 'DMSans_700Bold';
+  /* names must match the families loaded by useFonts in _layout.tsx.
+     Fredoka (rounded, bouncy) for headings and the big number; Nunito (rounded, readable, tabular figures) for text */
+  --font-display: 'Fredoka_700Bold';
+  --font-display-bold: 'Fredoka_600SemiBold';
+  --font-sans: 'Nunito_500Medium';
+  --font-sans-medium: 'Nunito_600SemiBold';
+  --font-sans-bold: 'Nunito_800ExtraBold';
 
   --text-sts: 96px;
   --text-sts--line-height: 100px;
@@ -47,8 +48,11 @@
       --color-field: #efe6da;
       --color-ink: #2a2420;
       --color-muted: #6e625a;
-      /* the sticker outline and hard shadow */
-      --color-edge: #2a2420;
+      /* the white die-cut edge around stickers */
+      --color-edge: #ffffff;
+      /* soft shadows under cards: a short ledge and a wide blur */
+      --color-ledge: rgba(42, 36, 32, 0.10);
+      --color-glow: rgba(42, 36, 32, 0.08);
       --color-cta: #2a2420;
       --color-on-cta: #ffffff;
 
@@ -66,7 +70,9 @@
       --color-field: #352f2a;
       --color-ink: #f6efe6;
       --color-muted: #b5a99c;
-      --color-edge: #0b0a09;
+      --color-edge: #3a332d;
+      --color-ledge: rgba(0, 0, 0, 0.35);
+      --color-glow: rgba(0, 0, 0, 0.30);
       --color-cta: #f6efe6;
       --color-on-cta: #1c1916;
 

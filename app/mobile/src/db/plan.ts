@@ -1,6 +1,8 @@
 // Writes for the budget's setup: paydays, term money, goals and settings. Each runs in one local transaction.
 import {
   applyContribution,
+  daysBetween,
+  startOfDay,
   assertCents,
   canAddGoal,
   canAddTermPlan,
@@ -13,7 +15,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { pickMainAccount } from './ledger';
 import { notifyChange } from './live';
-import type { GoalRecord, SettingKey, Settings } from './records';
+import { toDateString, type GoalRecord, type SettingKey, type Settings } from './records';
 import * as repo from './repo';
 
 // run a write atomically, then tell mounted screens to re-read
@@ -34,6 +36,12 @@ export function saveSetting<K extends SettingKey>(db: SQLiteDatabase, key: K, va
 // how the budget is split up; null goes back to the default
 export function setBudgetPeriod(db: SQLiteDatabase, kind: BudgetPeriodKind | null): Promise<void> {
   return saveSetting(db, 'budgetPeriod', kind);
+}
+
+// end the current budget on a day of the user's choosing (today or later), or null to go back to the normal end
+export function setBudgetEnd(db: SQLiteDatabase, day: Date | null, now = new Date()): Promise<void> {
+  if (day && daysBetween(startOfDay(now), day) < 0) return Promise.reject(new Error('Pick today or a day after it.'));
+  return saveSetting(db, 'budgetEndsOn', day ? toDateString(day) : null);
 }
 
 export interface IncomeInput {
@@ -73,13 +81,13 @@ export interface TermPlanInput {
 // add term money, or change it; the free app holds one current plan
 export function saveTermPlan(db: SQLiteDatabase, id: string | null, input: TermPlanInput, now = new Date()): Promise<void> {
   return write(db, async () => {
-    if (input.endDate.getTime() < input.startDate.getTime()) throw new Error('The last day has to come after the first.');
+    if (input.endDate.getTime() < input.startDate.getTime()) throw new Error('The end date needs to be after the start.');
     const fields = { ...input, amount: assertCents(input.amount, 'term amount'), isActive: true };
     if (id) {
       await repo.termPlans.update(db, id, fields);
       return;
     }
-    if (!canAddTermPlan(await repo.termPlans.list(db), now)) throw new Error('You already have term money on the go.');
+    if (!canAddTermPlan(await repo.termPlans.list(db), now)) throw new Error('You already have a semester plan going.');
     await repo.termPlans.insert(db, fields);
   });
 }
@@ -95,18 +103,18 @@ export interface GoalInput {
   dueDate: Date;
 }
 
-// add a goal at the bottom of the list, or change one; the free app holds two unfinished goals
+// add a goal at the bottom of the list, or change one; the free app holds three unfinished goals
 export function saveGoal(db: SQLiteDatabase, id: string | null, input: GoalInput): Promise<void> {
   return write(db, async () => {
     const amount = assertCents(input.amount, 'goal amount');
     if (id) {
       const existing = await repo.goals.get(db, id);
-      if (!existing) throw new Error('That goal no longer exists.');
+      if (!existing) throw new Error('That goal is gone.');
       await repo.goals.update(db, id, { ...input, amount, isCompleted: existing.amountSaved >= amount });
       return;
     }
     const goals = await repo.goals.list(db);
-    if (!canAddGoal(goals)) throw new Error('Two goals at a time for now. Finish or remove one first.');
+    if (!canAddGoal(goals)) throw new Error('You can have three goals at once. Finish or delete one first.');
     const lowest = goals.reduce((min, g) => Math.min(min, g.priority), 1);
     await repo.goals.insert(db, {
       ...input,
@@ -147,9 +155,9 @@ export function moveGoal(db: SQLiteDatabase, id: string, direction: 'up' | 'down
 export function allocateToGoal(db: SQLiteDatabase, goalId: string, amount: Cents, now = new Date()): Promise<Cents> {
   return write(db, async () => {
     const goal = await repo.goals.get(db, goalId);
-    if (!goal) throw new Error('That goal no longer exists.');
+    if (!goal) throw new Error('That goal is gone.');
     const wanted = assertCents(amount, 'amount');
-    if (wanted <= 0) throw new Error('Enter an amount above zero.');
+    if (wanted <= 0) throw new Error('Put in an amount above zero.');
     const moved = Math.min(wanted, Math.max(goal.amount - goal.amountSaved, 0));
     if (moved === 0) return 0;
 

@@ -8,7 +8,7 @@ import { isBackupDue } from '../lib/backup';
 import { reminderContent } from '../lib/reminder-text';
 import { termPreset } from '../lib/term';
 import { createAccount } from './ledger';
-import { allocateToGoal, moveGoal, saveGoal, saveIncome, saveSetting, saveTermPlan, setBudgetPeriod } from './plan';
+import { allocateToGoal, moveGoal, saveGoal, saveIncome, saveSetting, saveTermPlan, setBudgetEnd, setBudgetPeriod } from './plan';
 import * as repo from './repo';
 import { loadStsInput } from './sts';
 import { openTestDb } from './test-db';
@@ -40,6 +40,21 @@ describe('budget period', () => {
     expect(calculateSafeToSpend(await loadStsInput(db), now).period.kind).toBe('monthly');
   });
 
+  it('ends the current budget on a picked day, and clears back to the normal end', async () => {
+    await setBudgetPeriod(db, 'monthly');
+    await setBudgetEnd(db, day(20), day(6));
+    const picked = calculateSafeToSpend(await loadStsInput(db), day(6));
+    expect(picked.period.end).toEqual(day(20));
+    expect(picked.daily.daysLeft).toBe(15);
+
+    await setBudgetEnd(db, null);
+    expect(calculateSafeToSpend(await loadStsInput(db), day(6)).period.end).toEqual(day(31));
+  });
+
+  it('refuses an end day in the past', async () => {
+    await expect(setBudgetEnd(db, day(5), day(6))).rejects.toThrow(/today/);
+  });
+
   it('edits a payday in place', async () => {
     await saveIncome(db, null, { name: null, amount: 80_000, frequency: 'biweekly', nextPaymentDate: day(15) });
     const [income] = await repo.incomes.list(db);
@@ -69,7 +84,7 @@ describe('term money', () => {
   });
 
   it('rejects an end before the start', async () => {
-    await expect(saveTermPlan(db, null, { ...winter, endDate: day(2) }, day(6))).rejects.toThrow(/last day/);
+    await expect(saveTermPlan(db, null, { ...winter, endDate: day(2) }, day(6))).rejects.toThrow(/end date/);
   });
 
   it('names the plan for the storefront', () => {
@@ -83,11 +98,12 @@ describe('goals', () => {
   const laptop = { name: 'Laptop', amount: 60_000, dueDate: new Date(2027, 5, 1) };
   const trip = { name: 'Trip', amount: 30_000, dueDate: new Date(2027, 7, 1) };
 
-  it('adds new goals below existing ones and stops at two on the free app', async () => {
+  it('adds new goals below existing ones and stops at three on the free app', async () => {
     await saveGoal(db, null, laptop);
     await saveGoal(db, null, trip);
-    expect(sortGoalsByPriority(await repo.goals.list(db)).map((g) => g.name)).toEqual(['Laptop', 'Trip']);
-    await expect(saveGoal(db, null, { ...trip, name: 'Bike' })).rejects.toThrow(/Two goals/);
+    await saveGoal(db, null, { ...trip, name: 'Bike' });
+    expect(sortGoalsByPriority(await repo.goals.list(db)).map((g) => g.name)).toEqual(['Laptop', 'Trip', 'Bike']);
+    await expect(saveGoal(db, null, { ...trip, name: 'Car' })).rejects.toThrow(/three goals/);
   });
 
   it('reorders by priority', async () => {
@@ -127,10 +143,11 @@ describe('goals', () => {
   it('a finished goal frees a slot', async () => {
     await saveGoal(db, null, trip);
     await saveGoal(db, null, laptop);
+    await saveGoal(db, null, { ...trip, name: 'Bike' });
     const goals = await repo.goals.list(db);
     await allocateToGoal(db, goals.find((g) => g.name === 'Trip')!.id, 30_000, day(8));
-    await saveGoal(db, null, { ...trip, name: 'Bike' });
-    expect(await repo.goals.list(db)).toHaveLength(3);
+    await saveGoal(db, null, { ...trip, name: 'Car' });
+    expect(await repo.goals.list(db)).toHaveLength(4);
   });
 });
 
@@ -141,11 +158,11 @@ describe('reminder wording', () => {
     // Jan 12 2027 is a Tuesday, so the bill is due Friday
     expect(reminderContent({ kind: 'bill', date: day(12), bills: [bill] })).toEqual({
       title: 'Rent is due Friday',
-      body: "$1,200.00. It's already set aside in your daily number.",
+      body: '$1,200.00. Your daily number already accounts for it.',
     });
     const two = reminderContent({ kind: 'bill', date: day(12), bills: [bill, { ...bill, id: 'p', name: 'Phone', amount: 4_500 }] });
     expect(two.title).toBe('2 bills due Friday');
-    expect(two.body).toBe('Rent and Phone: $1,245.00 in all. Already set aside in your daily number.');
+    expect(two.body).toBe('Rent and Phone, $1,245.00 total. Your daily number already accounts for them.');
   });
 
   it('writes the Sunday summary from figures, or a plain invitation without them', () => {
@@ -154,8 +171,8 @@ describe('reminder wording', () => {
       { kind: 'summary', date: day(17) },
       { week, topCategoryNames: ['Groceries', 'Eating out', 'Transit'], perDay: 2_300, periodEnd: day(22) },
     ).body;
-    expect(body).toBe('Spent $142 this week, $17 less than last week. Mostly Groceries, Eating out and Transit. $23/day until Friday.');
-    expect(reminderContent({ kind: 'summary', date: day(24) }).body).toBe('Open Current to see how your week went.');
+    expect(body).toBe('Spent $142 this week, $17 less than last week. Mostly Groceries, Eating out and Transit. $23/day until Friday, Jan 22.');
+    expect(reminderContent({ kind: 'summary', date: day(24) }).body).toBe('Tap to see how your week went.');
   });
 
   it('respects the toggles stored in settings', async () => {

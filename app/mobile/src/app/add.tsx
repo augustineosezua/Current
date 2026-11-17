@@ -44,9 +44,9 @@ function centsToText(cents: number): string {
 }
 
 // the form itself; initial values come from props so it needs no effects
-function TransactionForm({ accounts, categories, history, transaction }: FormData) {
+function TransactionForm({ accounts, categories, history, transaction, startIn }: FormData & { startIn: boolean }) {
   const db = useSQLiteContext();
-  const [direction, setDirection] = useState<Direction>(transaction && transaction.amount < 0 ? 'in' : 'out');
+  const [direction, setDirection] = useState<Direction>(transaction ? (transaction.amount < 0 ? 'in' : 'out') : startIn ? 'in' : 'out');
   const [amountText, setAmountText] = useState(transaction ? centsToText(transaction.amount) : '');
   const [merchant, setMerchant] = useState(transaction?.merchantName ?? '');
   const [date, setDate] = useState(transaction?.date ?? new Date());
@@ -119,20 +119,20 @@ function TransactionForm({ accounts, categories, history, transaction }: FormDat
           onChange={setAccountId}
         />
       ) : null}
-      {error ? <Text className="font-sans-medium text-base text-ink">Couldn&apos;t save: {error}</Text> : null}
+      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
       <Button label={transaction ? 'Save' : 'Log it'} onPress={save} disabled={!valid} />
       {transaction ? <Button label="Delete" kind="plain" onPress={remove} /> : null}
     </Sheet>
   );
 }
 
-// log or edit a transaction (opened by the + button, or by tapping a row in Activity with ?id=)
+// log or edit a transaction (opened by the + button, ?direction=in from its menu, or a row in Activity with ?id=)
 export default function AddScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, direction } = useLocalSearchParams<{ id?: string; direction?: string }>();
   const load = useCallback((db: SQLiteDatabase) => loadForm(db, id), [id]);
   const { data, error } = useLiveQuery(load, false);
 
   if (error) return <Sheet title="Couldn't open this">{<Text className="font-sans text-base text-muted">{error.message}</Text>}</Sheet>;
   if (!data) return <Sheet title="">{null}</Sheet>;
-  return <TransactionForm {...data} />;
+  return <TransactionForm {...data} startIn={direction === 'in'} />;
 }

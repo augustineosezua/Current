@@ -11,10 +11,10 @@ export interface TermPreset {
 }
 
 const PRESETS: Record<Storefront, TermPreset> = {
-  CA: { name: 'OSAP', hint: 'OSAP, a scholarship or co-op pay: money that lands once and has to last the term.' },
-  US: { name: 'Financial aid refund', hint: 'A financial aid refund or a scholarship: money that lands once and has to last the term.' },
-  GB: { name: 'Maintenance loan', hint: 'A maintenance loan or a bursary: money that lands once and has to last the term.' },
-  OTHER: { name: 'Term money', hint: 'A loan, grant or scholarship: money that lands once and has to last the term.' },
+  CA: { name: 'OSAP', hint: 'OSAP, a scholarship, co-op pay. Money that comes in once and has to last the whole semester.' },
+  US: { name: 'Financial aid refund', hint: 'A financial aid refund or a scholarship. Money that comes in once and has to last the whole semester.' },
+  GB: { name: 'Maintenance loan', hint: 'A maintenance loan or a bursary. Money that comes in once and has to last the whole term.' },
+  OTHER: { name: 'Semester money', hint: 'A loan, grant or scholarship. Money that comes in once and has to last the whole semester.' },
 };
 
 // the preset for this phone's region

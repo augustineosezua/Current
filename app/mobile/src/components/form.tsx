@@ -1,8 +1,27 @@
+import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useCSSVariable } from 'uniwind';
 
+import { Pop, usePressScale } from './motion';
 import { Raised } from './raised';
+
+// round × in a sheet's top right corner; closes without saving
+function CloseButton() {
+  const ink = useCSSVariable('--color-ink') as string;
+  return (
+    <Pressable
+      onPress={() => router.back()}
+      accessibilityRole="button"
+      accessibilityLabel="Close"
+      hitSlop={8}
+      className="h-11 w-11 items-center justify-center rounded-full bg-field active:opacity-70">
+      <SymbolView name="xmark" size={16} weight="bold" tintColor={ink} />
+    </Pressable>
+  );
+}
 
 // body of a form sheet: title, then fields in a scroll column that keeps taps working over the keyboard
 export function Sheet({ title, children }: { title: string; children: ReactNode }) {
@@ -12,7 +31,10 @@ export function Sheet({ title, children }: { title: string; children: ReactNode 
       contentContainerClassName="gap-5 px-5 pb-12 pt-8"
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive">
-      <Text className="font-display text-3xl text-ink">{title}</Text>
+      <View className="flex-row items-start justify-between gap-3">
+        <Text className="flex-1 font-display text-3xl text-ink">{title}</Text>
+        <CloseButton />
+      </View>
       {children}
     </ScrollView>
   );
@@ -25,7 +47,7 @@ const BUTTON_TEXT = {
   plain: 'font-sans-medium text-muted',
 } as const;
 
-// primary is the ink-edge pill; secondary is a flat pill; plain is text only (Skip, Delete)
+// primary is the raised dark pill; secondary is a flat pill; plain is text only (Skip, Delete)
 export function Button({
   label,
   onPress,
@@ -38,21 +60,28 @@ export function Button({
   disabled?: boolean;
 }) {
   const text = <Text className={`text-center text-base ${BUTTON_TEXT[kind]}`}>{label}</Text>;
+  const squish = usePressScale(kind === 'plain' ? 1 : 0.97);
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={squish.pressIn}
+      onPressOut={squish.pressOut}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
-      className={disabled ? 'opacity-40' : 'active:opacity-80'}>
-      {kind === 'primary' ? (
-        <Raised shape="rounded-full" surface="bg-cta">
-          <View className="min-h-13 justify-center px-6 py-3">{text}</View>
-        </Raised>
-      ) : kind === 'secondary' ? (
-        <View className="min-h-13 justify-center rounded-full bg-field px-6 py-3">{text}</View>
-      ) : (
-        <View className="min-h-11 justify-center px-6">{text}</View>
+      className={disabled ? 'opacity-40' : kind === 'primary' ? '' : 'active:opacity-70'}>
+      {({ pressed }) => (
+        <Animated.View style={squish.style}>
+          {kind === 'primary' ? (
+            <Raised shape="rounded-full" surface="bg-cta" pressed={pressed}>
+              <View className="min-h-13 justify-center px-6 py-3">{text}</View>
+            </Raised>
+          ) : kind === 'secondary' ? (
+            <View className="min-h-13 justify-center rounded-full bg-field px-6 py-3">{text}</View>
+          ) : (
+            <View className="min-h-11 justify-center px-6">{text}</View>
+          )}
+        </Animated.View>
       )}
     </Pressable>
   );
@@ -150,16 +179,15 @@ export function Chips<T extends string>({
         {options.map((o) => {
           const selected = o.value === value;
           return (
-            <Pressable
-              key={o.value}
-              onPress={() => onChange(o.value)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              className={`min-h-11 justify-center rounded-full border-2 px-4 ${selected ? 'border-edge bg-cta' : 'border-transparent bg-field'}`}>
-              <Text className={`text-base ${selected ? 'font-sans-bold text-on-cta' : 'font-sans-medium text-ink'}`}>
-                {o.label}
-              </Text>
-            </Pressable>
+            <Pop key={o.value} trigger={selected} enabled={selected} to={1.08}>
+              <Pressable
+                onPress={() => onChange(o.value)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                className={`min-h-11 justify-center rounded-full px-4 ${selected ? 'bg-cta' : 'bg-field active:opacity-70'}`}>
+                <Text className={`text-base ${selected ? 'font-sans-bold text-on-cta' : 'font-sans-medium text-ink'}`}>{o.label}</Text>
+              </Pressable>
+            </Pop>
           );
         })}
       </View>
