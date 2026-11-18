@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { useCSSVariable } from 'uniwind';
 
 import { ForegroundRefresh } from '@/components/foreground-refresh';
+import { PlusSync } from '@/components/plus-sync';
 import { ReminderSync } from '@/components/reminder-sync';
 import { ToastProvider } from '@/components/toast';
 import { migrateDbIfNeeded } from '@/db/migrate';
@@ -36,6 +37,7 @@ export default function RootLayout() {
   return (
     <SQLiteProvider databaseName="current.db" onInit={migrateDbIfNeeded}>
       <ReminderSync />
+      <PlusSync />
       <ForegroundRefresh />
       <ToastProvider>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: bg } }}>
@@ -49,6 +51,16 @@ export default function RootLayout() {
           <Stack.Screen name="term-plan" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
           <Stack.Screen name="goal" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
           <Stack.Screen name="category" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="plus" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="cloud-ai" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="afford" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="category-budget" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="import" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+          <Stack.Screen name="insights" />
+          <Stack.Screen name="recap" />
+          <Stack.Screen name="ask" />
+          <Stack.Screen name="appearance" />
+          <Stack.Screen name="ai-eval" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="categories" />
           <Stack.Screen name="budget" />

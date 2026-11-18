@@ -4,6 +4,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { loadStsInput, type BudgetData } from '@/db/sts';
 
+import { isPlusNow } from './plus';
 import { reminderContent, type SummaryFigures } from './reminder-text';
 
 // local hour each kind of reminder is shown at
@@ -55,8 +56,10 @@ export async function syncReminders(db: SQLiteDatabase, now = new Date()): Promi
     if (date.getTime() <= now.getTime()) continue;
     const figures = reminder.kind === 'summary' && !summarized ? summaryFigures(input, reminder.date) : null;
     if (reminder.kind === 'summary') summarized = true;
+    // 2.10: for Plus, the Sunday summary opens the written recap
+    const link = reminder.kind === 'summary' && isPlusNow() ? { data: { url: '/recap' } } : {};
     await Notifications.scheduleNotificationAsync({
-      content: reminderContent(reminder, figures),
+      content: { ...reminderContent(reminder, figures), ...link },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date },
     });
   }

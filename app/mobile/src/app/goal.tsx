@@ -1,33 +1,95 @@
-import { formatMoney, toCents } from '@current/core';
+import { addDays, daysBetween, toCents } from '@current/core';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { DateField } from '@/components/date-field';
-import { AmountField, Button, Field, Sheet } from '@/components/form';
+import { AmountField, Button, Chips, Field, Sheet } from '@/components/form';
+import { openPaywall, PlusTag } from '@/components/plus';
 import { useToast } from '@/components/toast';
-import { allocateToGoal, deleteGoal, saveGoal } from '@/db/plan';
-import type { GoalRecord } from '@/db/records';
+import { allocateToGoal, deleteGoal, saveGoal, withdrawFromGoal } from '@/db/plan';
+import type { GoalRecord, TransactionRecord } from '@/db/records';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
+import { t } from '@/i18n';
+import { money, shortDate } from '@/lib/format';
+import { usePlus } from '@/lib/plus';
+
+// recent purchases a withdrawal can be linked to
+const PURCHASE_WINDOW_DAYS = 14;
+const MAX_PURCHASES = 6;
 
 interface FormData {
   goal: GoalRecord | null;
   hasSavingsAccount: boolean;
+  // recent spending, newest first, for "What did it pay for?"
+  recent: TransactionRecord[];
 }
 
-// the goal being edited, and whether set-aside money has a savings account to land in
+// the goal being edited, whether set-aside money has a savings account to land in, and recent spending
 async function loadForm(db: SQLiteDatabase, id: string | undefined): Promise<FormData> {
-  const [goal, accounts] = await Promise.all([id ? repo.goals.get(db, id) : null, repo.accounts.list(db)]);
-  return { goal, hasSavingsAccount: accounts.some((a) => a.type === 'savings') };
+  const [goal, accounts, transactions] = await Promise.all([id ? repo.goals.get(db, id) : null, repo.accounts.list(db), repo.transactions.list(db)]);
+  const since = addDays(new Date(), -PURCHASE_WINDOW_DAYS);
+  const recent = transactions
+    .filter((tx) => tx.amount > 0 && !tx.goalId && !tx.createdFromBill && daysBetween(since, tx.date) >= 0)
+    .slice(0, MAX_PURCHASES);
+  return { goal, hasSavingsAccount: accounts.some((a) => a.type === 'savings'), recent };
+}
+
+// 2.4 (Plus): take money back out, optionally saying what it paid for
+function TakeOut({ goal, recent, onDone }: { goal: GoalRecord; recent: TransactionRecord[]; onDone: (task: () => Promise<void>) => void }) {
+  const db = useSQLiteContext();
+  const toast = useToast();
+  const isPlus = usePlus();
+  const [text, setText] = useState('');
+  const [purchase, setPurchase] = useState<string>('none');
+  const amount = toCents(text);
+
+  if (!isPlus) {
+    return (
+      <Pressable onPress={() => openPaywall('goal-withdraw')} accessibilityRole="button" className="flex-row items-center justify-between rounded-md bg-card p-4 active:opacity-70">
+        <Text className="font-sans-medium text-base text-ink">{t('goal.takeOut')}</Text>
+        <PlusTag />
+      </Pressable>
+    );
+  }
+
+  const take = () =>
+    onDone(async () => {
+      if (amount === null || amount <= 0) return;
+      const moved = await withdrawFromGoal(db, goal.id, amount, { purchaseId: purchase === 'none' ? null : purchase });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      toast({ message: t('goal.took', { amount: money(moved), goal: goal.name }) });
+    });
+
+  return (
+    <View className="gap-5 border-t-2 border-field pt-5">
+      <Text className="font-display-bold text-xl text-ink">{t('goal.takeOut')}</Text>
+      <Text className="font-sans text-base leading-6 text-muted">{t('goal.takeOutBody', { saved: money(goal.amountSaved) })}</Text>
+      <AmountField label={t('common.howMuch')} value={text} onChangeText={setText} />
+      {recent.length > 0 ? (
+        <Chips
+          label={t('goal.paidFor')}
+          options={[
+            { value: 'none', label: t('goal.nothingSpecific') },
+            ...recent.map((tx) => ({ value: tx.id, label: `${tx.merchantName ?? t('activity.spending')} · ${money(tx.amount)} · ${shortDate(tx.date)}` })),
+          ]}
+          value={purchase}
+          onChange={setPurchase}
+        />
+      ) : null}
+      <Button label={t('goal.takeIt')} kind="secondary" onPress={take} disabled={amount === null || amount <= 0} />
+    </View>
+  );
 }
 
 // add or edit a goal; an unfinished goal can also have money set aside for it
-function GoalForm({ goal, hasSavingsAccount }: FormData) {
+function GoalForm({ goal, hasSavingsAccount, recent }: FormData) {
   const db = useSQLiteContext();
   const toast = useToast();
+  const isPlus = usePlus();
   const [name, setName] = useState(goal?.name ?? '');
   const [amountText, setAmountText] = useState(goal ? (goal.amount / 100).toFixed(2) : '');
   const [dueDate, setDueDate] = useState<Date | null>(goal?.dueDate ?? null);
@@ -48,11 +110,11 @@ function GoalForm({ goal, hasSavingsAccount }: FormData) {
     }
   };
 
-  // create or update the goal's details
+  // create or update the goal's details; Plus has no limit on how many
   const save = () =>
     run(async () => {
       if (!valid) return;
-      await saveGoal(db, goal?.id ?? null, { name: name.trim(), amount, dueDate });
+      await saveGoal(db, goal?.id ?? null, { name: name.trim(), amount, dueDate }, isPlus);
     });
 
   // move money out of spending and count it towards the goal
@@ -62,31 +124,31 @@ function GoalForm({ goal, hasSavingsAccount }: FormData) {
       const moved = await allocateToGoal(db, goal.id, aside);
       if (moved === 0) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      toast({ message: `Added ${formatMoney(moved)} to ${goal.name}` });
+      toast({ message: t('goal.added', { amount: money(moved), goal: goal.name }) });
     });
 
+  const progress = { saved: money(goal?.amountSaved ?? 0), target: money(goal?.amount ?? 0) };
+
   return (
-    <Sheet title={goal ? 'Edit goal' : 'Add a goal'}>
-      <Field label="What's it for?" value={name} onChangeText={setName} placeholder="Laptop" autoFocus={!goal} />
-      <AmountField label="How much?" value={amountText} onChangeText={setAmountText} />
-      <DateField label="By when?" value={dueDate} onChange={setDueDate} />
-      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
-      <Button label="Save" onPress={save} disabled={!valid} />
+    <Sheet title={goal ? t('goal.edit') : t('goal.add')}>
+      <Field label={t('goal.whatFor')} value={name} onChangeText={setName} placeholder={t('goal.placeholder')} autoFocus={!goal} />
+      <AmountField label={t('common.howMuch')} value={amountText} onChangeText={setAmountText} />
+      <DateField label={t('goal.byWhen')} value={dueDate} onChange={setDueDate} />
+      {error ? <Text className="font-sans-medium text-base text-ink">{t('common.didntSave', { error })}</Text> : null}
+      <Button label={t('common.save')} onPress={save} disabled={!valid} />
 
       {goal && !goal.isCompleted ? (
         <View className="gap-5 border-t-2 border-field pt-5">
-          <Text className="font-display-bold text-xl text-ink">Put money in</Text>
+          <Text className="font-display-bold text-xl text-ink">{t('goal.putIn')}</Text>
           <Text className="font-sans text-base leading-6 text-muted">
-            {formatMoney(goal.amountSaved)} of {formatMoney(goal.amount)} so far.{' '}
-            {hasSavingsAccount
-              ? 'Move it to savings in your bank app, then log it here.'
-              : 'Put it somewhere you won’t spend it, then log it here. It comes out of your balance.'}
+            {hasSavingsAccount ? t('goal.putInSavings', progress) : t('goal.putInNoSavings', progress)}
           </Text>
-          <AmountField label="How much now?" value={asideText} onChangeText={setAsideText} />
-          <Button label="Add it" kind="secondary" onPress={setAside} disabled={aside === null || aside <= 0} />
+          <AmountField label={t('goal.howMuchNow')} value={asideText} onChangeText={setAsideText} />
+          <Button label={t('goal.addIt')} kind="secondary" onPress={setAside} disabled={aside === null || aside <= 0} />
         </View>
       ) : null}
-      {goal ? <Button label="Delete goal" kind="plain" onPress={() => run(() => deleteGoal(db, goal.id))} /> : null}
+      {goal && goal.amountSaved > 0 ? <TakeOut goal={goal} recent={recent} onDone={(task) => void run(task)} /> : null}
+      {goal ? <Button label={t('goal.delete')} kind="plain" onPress={() => run(() => deleteGoal(db, goal.id))} /> : null}
     </Sheet>
   );
 }

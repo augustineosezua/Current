@@ -1,4 +1,4 @@
-import { formatMoney, toCents, type Frequency } from '@current/core';
+import { toCents, type Frequency } from '@current/core';
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
@@ -10,18 +10,19 @@ import { DateField } from '@/components/date-field';
 import { AmountField, Button, Chips, Field } from '@/components/form';
 import { completeOnboarding, type BillInput } from '@/db/ledger';
 import { requestReminderPermission } from '@/lib/reminders';
-import { dayLabel, FREQUENCY_LABELS } from '@/lib/format';
+import { t } from '@/i18n';
+import { dayLabel, frequencyLabel, money } from '@/lib/format';
 
 const StyledSafeAreaView = withUniwind(SafeAreaView);
 
 const PAY_FREQUENCIES: readonly { value: Frequency; label: string }[] = (
   ['weekly', 'biweekly', 'semimonthly', 'monthly', 'one_time'] as const
-).map((value) => ({ value, label: FREQUENCY_LABELS[value] }));
+).map((value) => ({ value, label: frequencyLabel(value) }));
 
-const BILL_REPEATS: readonly { value: Frequency; label: string }[] = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'one_time', label: 'Just once' },
-];
+const BILL_REPEATS: readonly { value: Frequency; label: string }[] = (['monthly', 'one_time'] as const).map((value) => ({
+  value,
+  label: frequencyLabel(value),
+}));
 
 // first run: balance, next income, bills. No signup, and the next screen is the number.
 export default function OnboardingScreen() {
@@ -79,31 +80,27 @@ export default function OnboardingScreen() {
     <StyledSafeAreaView className="flex-1 bg-bg">
       <KeyboardAvoidingView behavior="padding" className="flex-1">
         <ScrollView contentContainerClassName="gap-5 px-5 pb-10 pt-6" keyboardShouldPersistTaps="handled">
-          <Text className="font-sans-bold text-sm text-muted">Step {step + 1} of 3 · No account. No bank login.</Text>
+          <Text className="font-sans-bold text-sm text-muted">{t('onboarding.step', { step: step + 1 })}</Text>
 
           {step === 0 ? (
             <>
-              <Text className="font-display text-4xl text-ink">How much is in your account?</Text>
-              <Text className="font-sans text-base leading-6 text-muted">
-                Ballpark is fine, you can fix it later. It stays on your phone.
-              </Text>
-              <AmountField label="Balance" value={balanceText} onChangeText={setBalanceText} autoFocus allowNegative />
-              <Button label="Next" onPress={() => setStep(1)} disabled={balance === null} />
+              <Text className="font-display text-4xl text-ink">{t('onboarding.balanceTitle')}</Text>
+              <Text className="font-sans text-base leading-6 text-muted">{t('onboarding.balanceBody')}</Text>
+              <AmountField label={t('onboarding.balance')} value={balanceText} onChangeText={setBalanceText} autoFocus allowNegative />
+              <Button label={t('common.next')} onPress={() => setStep(1)} disabled={balance === null} />
             </>
           ) : null}
 
           {step === 1 ? (
             <>
-              <Text className="font-display text-4xl text-ink">When&apos;s your next payday?</Text>
-              <Text className="font-sans text-base leading-6 text-muted">
-                Job, allowance, anything that comes in regularly. Your budget runs from one payday to the next.
-              </Text>
-              <AmountField label="How much?" value={payText} onChangeText={setPayText} autoFocus />
-              <Chips label="How often?" options={PAY_FREQUENCIES} value={payFrequency} onChange={setPayFrequency} />
-              <DateField label="Next payday" value={payDate} onChange={setPayDate} />
-              <Button label="Next" onPress={() => setStep(2)} disabled={!hasIncome} />
+              <Text className="font-display text-4xl text-ink">{t('onboarding.payTitle')}</Text>
+              <Text className="font-sans text-base leading-6 text-muted">{t('onboarding.payBody')}</Text>
+              <AmountField label={t('common.howMuch')} value={payText} onChangeText={setPayText} autoFocus />
+              <Chips label={t('onboarding.howOften')} options={PAY_FREQUENCIES} value={payFrequency} onChange={setPayFrequency} />
+              <DateField label={t('onboarding.nextPayday')} value={payDate} onChange={setPayDate} />
+              <Button label={t('common.next')} onPress={() => setStep(2)} disabled={!hasIncome} />
               <Button
-                label="Skip, I don't get paid regularly"
+                label={t('onboarding.skipPay')}
                 kind="plain"
                 onPress={() => {
                   setPayText('');
@@ -115,29 +112,27 @@ export default function OnboardingScreen() {
 
           {step === 2 ? (
             <>
-              <Text className="font-display text-4xl text-ink">Any bills coming up?</Text>
-              <Text className="font-sans text-base leading-6 text-muted">
-                Rent, phone, subscriptions. We take these out first so your daily number is real.
-              </Text>
+              <Text className="font-display text-4xl text-ink">{t('onboarding.billsTitle')}</Text>
+              <Text className="font-sans text-base leading-6 text-muted">{t('onboarding.billsBody')}</Text>
               {bills.map((b, i) => (
                 <View key={i} className="flex-row items-center justify-between rounded-md bg-card p-4">
                   <Text className="shrink font-sans-bold text-base text-ink">
                     {b.name} <Text className="font-sans text-muted">· {dayLabel(b.dueDate)}</Text>
                   </Text>
-                  <Text className="font-display-bold text-lg tabular-nums text-ink">{formatMoney(b.amount)}</Text>
+                  <Text className="font-display-bold text-lg tabular-nums text-ink">{money(b.amount)}</Text>
                 </View>
               ))}
-              <Field label="What is it?" value={billName} onChangeText={setBillName} placeholder="Rent" />
-              <AmountField label="How much?" value={billText} onChangeText={setBillText} />
-              <DateField label="Next due" value={billDue} onChange={setBillDue} />
-              <Chips label="Repeats" options={BILL_REPEATS} value={billRepeats} onChange={setBillRepeats} />
-              <Button label="Add another bill" kind="secondary" onPress={addBill} disabled={!draftBill} />
-              {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
-              <Button label="Show me my number" onPress={finish} />
+              <Field label={t('common.whatIsIt')} value={billName} onChangeText={setBillName} placeholder={t('onboarding.billPlaceholder')} />
+              <AmountField label={t('common.howMuch')} value={billText} onChangeText={setBillText} />
+              <DateField label={t('onboarding.nextDue')} value={billDue} onChange={setBillDue} />
+              <Chips label={t('onboarding.repeats')} options={BILL_REPEATS} value={billRepeats} onChange={setBillRepeats} />
+              <Button label={t('onboarding.addAnother')} kind="secondary" onPress={addBill} disabled={!draftBill} />
+              {error ? <Text className="font-sans-medium text-base text-ink">{t('common.didntSave', { error })}</Text> : null}
+              <Button label={t('onboarding.finish')} onPress={finish} />
             </>
           ) : null}
 
-          {step > 0 ? <Button label="Back" kind="plain" onPress={() => setStep(step - 1)} /> : null}
+          {step > 0 ? <Button label={t('common.back')} kind="plain" onPress={() => setStep(step - 1)} /> : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </StyledSafeAreaView>

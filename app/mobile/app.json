@@ -49,8 +49,42 @@
         }
       ],
       "@react-native-ai/apple",
-      "expo-localization",
-      "expo-alternate-app-icons"
+      [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": [
+              "en",
+              "fr-CA"
+            ]
+          }
+        }
+      ],
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "Mint",
+            "ios": "./assets/images/alt-icons/Mint.png"
+          },
+          {
+            "name": "Night",
+            "ios": "./assets/images/alt-icons/Night.png"
+          },
+          {
+            "name": "Sky",
+            "ios": "./assets/images/alt-icons/Sky.png"
+          },
+          {
+            "name": "Lilac",
+            "ios": "./assets/images/alt-icons/Lilac.png"
+          },
+          {
+            "name": "Butter",
+            "ios": "./assets/images/alt-icons/Butter.png"
+          }
+        ]
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

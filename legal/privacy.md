@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Effective date: November 16, 2026 · Version 2.0
+Effective date: November 17, 2026 · Version 2.1
 
 > No account. No bank login. Your budget lives on your phone, and we don't have a copy of it.
 
@@ -8,7 +8,7 @@ Effective date: November 16, 2026 · Version 2.0
 
 - **No account. No bank login.** You don't sign up, and Current never connects to your bank.
 - **Your budget lives on your phone.** Your balances, transactions, bills, goals and notes are stored on your device. We don't have a copy.
-- AI features run on your iPhone when it supports Apple's on-device model. On other iPhones they can use our cloud AI service, but only after you've seen a notice and agreed. That service stores nothing.
+- **AI features run only on your iPhone.** They use Apple's on-device model, and nothing you type or ask is sent to us. On iPhones that don't support it, those features aren't available.
 - We collect anonymous usage analytics that never include amounts, merchant names, notes or account names.
 - We don't sell your information and we don't show ads.
 
@@ -16,20 +16,19 @@ This policy explains what the developer of Current ("we", "us") handles when you
 
 ## 1. Data that stays on your device
 
-Everything you enter into Current is stored only in the App's storage on your phone. That includes accounts, balances, transactions, merchants, categories, bills, income, goals, term plans and settings. We can't see it, access it or recover it.
+Everything you enter into Current is stored only in the App's storage on your phone. That includes accounts, balances, transactions, merchants, categories, spending limits, bills, income, goals, term plans, settings and your Ask Current conversations. We can't see it, access it or recover it.
+
+If you import a bank file (CSV, OFX or QFX), the App reads it on your phone and adds the entries to your budget there. The file is never uploaded to us.
 
 That data is included in your iPhone and iCloud device backups if you have them turned on. Those backups are handled by Apple under Apple's privacy policy. CSV exports you create go wherever you choose to save or send them.
 
 ## 2. AI features
 
-**On-device.** On iPhones that support Apple Intelligence, AI features (such as quick add, "Can I afford this?", the weekly recap and Ask Current) run on Apple's on-device model. Nothing is sent to us.
+AI features (quick add, "Can I afford this?", the weekly recap and Ask Current) run on Apple's on-device model, which is part of Apple Intelligence. They work only on iPhones that support Apple Intelligence and have it turned on. The text you type, the questions you ask and the answers stay on your phone. Nothing is sent to us, and we don't use an outside AI service. Apple's handling of Apple Intelligence is covered by Apple's privacy policy.
 
-**Cloud AI (only if you agree).** On iPhones that can't run the on-device model, AI features can use our cloud AI service instead. Before the first use, the App tells you this and asks for your agreement, and you can turn "Cloud AI" off in Settings at any time. When it's on, the App sends only:
+On iPhones without Apple Intelligence, these features aren't available. Quick add still fills in what it can from your own past entries, on your phone.
 
-- the text you typed or the question you asked, and
-- the figures needed to answer it, which the App calculates on your phone (for example, today's Safe-to-Spend figure or the price of an item).
-
-Your transaction history is never sent. Our service passes the request to our AI model provider, Anthropic, to produce the answer, then returns it to your phone. We don't store the request or the answer, and we don't log their contents. We keep a random install identifier for rate limiting and to check that your Plus subscription is active.
+If we ever offer AI that runs on a server, it will be optional and off until you agree to it. We'll update this policy and show a notice in the App first.
 
 ## 3. Anonymous analytics
 
@@ -49,7 +48,7 @@ Reminders and summaries are scheduled locally on your phone. We don't send them,
 
 ## 7. Sharing
 
-We don't sell or rent your information. The only third parties involved are the ones named above (Apple, RevenueCat, our analytics provider and, if you turn on cloud AI, Anthropic and our hosting provider), each acting on our behalf, plus anyone we're legally required to disclose information to. Since we don't hold your budget data, we have none of it to share.
+We don't sell or rent your information. The only third parties involved are the ones named above (Apple, RevenueCat and our analytics provider), each acting on our behalf, plus anyone we're legally required to disclose information to. Since we don't hold your budget data, we have none of it to share.
 
 ## 8. Your rights
 
@@ -61,7 +60,7 @@ Current isn't directed at children under 13. We don't knowingly collect informat
 
 ## 10. Changes
 
-If we change this policy in a material way, for example when optional cloud sync arrives for Plus, we'll update the effective date and show a notice in the App before the change takes effect. Cloud sync will always be optional, and this policy will describe it in full before it launches.
+If we change this policy in a material way, for example when optional cloud sync arrives for Plus, or if we add optional server-side AI, we'll update the effective date and show a notice in the App before the change takes effect. Cloud sync will always be optional, and this policy will describe it in full before it launches.
 
 ## 11. Contact
 

@@ -1,4 +1,4 @@
-import { daysBetween, defaultBudgetPeriod, formatMoney, getNextPaymentDate, type BudgetPeriodKind } from '@current/core';
+import { daysBetween, defaultBudgetPeriod, getNextPaymentDate, type BudgetPeriodKind } from '@current/core';
 import { Link, router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
@@ -9,43 +9,51 @@ import { DateField } from '@/components/date-field';
 import { Button, Chips } from '@/components/form';
 import { Raised } from '@/components/raised';
 import { Screen } from '@/components/screen';
-import { setBudgetEnd, setBudgetPeriod } from '@/db/plan';
-import type { IncomeRecord } from '@/db/records';
+import { saveSetting, setBudgetEnd, setBudgetPeriod } from '@/db/plan';
+import type { IncomeRecord, Settings } from '@/db/records';
 import { useSafeToSpend } from '@/db/sts';
-import { dayLabel, FREQUENCY_LABELS, monthDayLabel } from '@/lib/format';
+import { t } from '@/i18n';
+import { dayLabel, frequencyLabel, money, monthDayLabel } from '@/lib/format';
 
 const PERIODS: readonly { value: BudgetPeriodKind; label: string }[] = [
-  { value: 'paycheque', label: 'By paycheque' },
-  { value: 'monthly', label: 'By month' },
-  { value: 'term', label: 'By semester' },
+  { value: 'paycheque', label: t('budget.byPaycheque') },
+  { value: 'monthly', label: t('budget.byMonth') },
+  { value: 'term', label: t('budget.byTerm') },
+];
+
+// what the big number on Home shows
+const HERO_OPTIONS: readonly { value: Settings['heroAmount']; label: string }[] = [
+  { value: 'perDay', label: t('budget.heroPerDay') },
+  { value: 'total', label: t('budget.heroTotal') },
 ];
 
 // what's missing when the chosen period can't be used yet
 const MISSING: Record<BudgetPeriodKind, string> = {
-  paycheque: 'Add a payday below first. Until then it goes by month.',
-  term: 'Add semester money on the Plan tab first. Until then it goes by month.',
+  paycheque: t('budget.missingPaycheque'),
+  term: t('budget.missingTerm'),
   monthly: '',
 };
 
 // one payday; tapping opens it for editing
 function IncomeRow({ income, now }: { income: IncomeRecord; now: Date }) {
   const next = getNextPaymentDate(income, now);
-  const when = next ? `Next ${dayLabel(next, now)}` : 'No upcoming payday';
+  const when = next ? t('budget.next', { day: dayLabel(next, now) }) : t('budget.noUpcoming');
+  const name = income.name ?? t('budget.payday');
   return (
     <Link href={{ pathname: '/income', params: { id: income.id } }} asChild>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${income.name ?? 'Payday'}, ${formatMoney(income.amount)}, ${when}. Edit`}
+        accessibilityLabel={t('common.edit', { label: `${name}, ${money(income.amount)}, ${when}` })}
         className="min-h-16 flex-row items-center gap-3 px-4 py-2 active:opacity-70">
         <View className="flex-1">
           <Text className="font-sans-bold text-base text-ink" numberOfLines={1}>
-            {income.name ?? 'Payday'}
+            {name}
           </Text>
           <Text className="font-sans text-sm text-muted">
-            {when} · {FREQUENCY_LABELS[income.frequency].toLowerCase()}
+            {when} · {frequencyLabel(income.frequency).toLowerCase()}
           </Text>
         </View>
-        <Text className="font-display-bold text-lg tabular-nums text-ink">{formatMoney(income.amount)}</Text>
+        <Text className="font-display-bold text-lg tabular-nums text-ink">{money(income.amount)}</Text>
       </Pressable>
     </Link>
   );
@@ -65,14 +73,12 @@ function BudgetEndCard({ end, picked }: { end: Date; picked: boolean }) {
   return (
     <Raised>
       <View className="gap-3 p-5">
-        <DateField key={end.getTime()} label="This budget ends" value={end} onChange={pick} minDate={new Date()} />
+        <DateField key={end.getTime()} label={t('budget.ends')} value={end} onChange={pick} minDate={new Date()} />
         <Text className="font-sans text-base leading-6 text-muted">
-          {picked
-            ? 'You picked this date. Once it passes, things go back to normal.'
-            : 'Want it to end on a different day? Tap the date and pick one. Your daily number gets worked out to that day.'}
+          {picked ? t('budget.endsPicked') : t('budget.endsHint')}
         </Text>
         {error ? <Text className="font-sans-medium text-base text-ink">{error}</Text> : null}
-        {picked ? <Button label="Go back to the normal end" kind="secondary" onPress={() => void setBudgetEnd(db, null)} /> : null}
+        {picked ? <Button label={t('budget.endsReset')} kind="secondary" onPress={() => void setBudgetEnd(db, null)} /> : null}
       </View>
     </Raised>
   );
@@ -84,7 +90,7 @@ export default function BudgetScreen() {
   const { input, result } = useSafeToSpend();
   const now = new Date();
 
-  if (!input || !result) return <Screen header={<BackButton />} title="Budget">{null}</Screen>;
+  if (!input || !result) return <Screen header={<BackButton />} title={t('budget.title')}>{null}</Screen>;
 
   const chosen = input.settings.budgetPeriod ?? defaultBudgetPeriod(input.incomes, now);
   const period = result.period;
@@ -93,13 +99,13 @@ export default function BudgetScreen() {
   const picked = !!override && daysBetween(now, override) >= 0;
 
   return (
-    <Screen header={<BackButton />} title="Budget">
+    <Screen header={<BackButton />} title={t('budget.title')}>
       <Raised>
-        <View className="gap-4 p-5">
-          <Chips label="Budget" options={PERIODS} value={chosen} onChange={(kind) => void setBudgetPeriod(db, kind)} />
+        <View className="gap-3 p-5">
+          <Chips label={t('budget.title')} options={PERIODS} value={chosen} onChange={(kind) => void setBudgetPeriod(db, kind)} />
           <Text className="font-sans text-base leading-6 text-muted">
             {period.kind === chosen
-              ? `Right now that's ${monthDayLabel(period.start)} to ${monthDayLabel(period.end)}.`
+              ? t('budget.rightNow', { start: monthDayLabel(period.start), end: monthDayLabel(period.end) })
               : MISSING[chosen]}
           </Text>
         </View>
@@ -107,7 +113,19 @@ export default function BudgetScreen() {
 
       <BudgetEndCard end={period.end} picked={picked} />
 
-      <Text className="font-display-bold text-xl text-ink">Paydays</Text>
+      <Raised>
+        <View className="gap-3 p-5">
+          <Chips
+            label={t('budget.heroShows')}
+            options={HERO_OPTIONS}
+            value={input.settings.heroAmount}
+            onChange={(value) => void saveSetting(db, 'heroAmount', value)}
+          />
+          <Text className="font-sans text-base leading-6 text-muted">{t('budget.heroHint')}</Text>
+        </View>
+      </Raised>
+
+      <Text className="font-display-bold text-xl text-ink">{t('budget.paydays')}</Text>
       {input.incomes.length > 0 ? (
         <Raised>
           <View className="py-1">
@@ -117,11 +135,9 @@ export default function BudgetScreen() {
           </View>
         </Raised>
       ) : (
-        <Text className="font-sans text-base leading-6 text-muted">
-          No paydays yet. Add one and your budget runs payday to payday.
-        </Text>
+        <Text className="font-sans text-base leading-6 text-muted">{t('budget.noPaydays')}</Text>
       )}
-      <Button label="Add a payday" kind="secondary" onPress={() => router.push('/income')} />
+      <Button label={t('budget.addPayday')} kind="secondary" onPress={() => router.push('/income')} />
     </Screen>
   );
 }

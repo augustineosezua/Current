@@ -1,15 +1,8 @@
 // Wording for local notifications. Pure, so vitest can check every line.
-import {
-  addDays,
-  formatMoney,
-  formatMoneyWhole,
-  BILL_REMINDER_DAYS_BEFORE,
-  type Cents,
-  type Reminder,
-  type WeeklySummary,
-} from '@current/core';
+import { addDays, BILL_REMINDER_DAYS_BEFORE, type Cents, type Reminder, type WeeklySummary } from '@current/core';
 
-import { untilLabel, weekdayLabel } from './format';
+import { t } from '../i18n';
+import { listLabel, money, moneyWhole, untilLabel, weekdayLabel } from './format';
 
 export interface ReminderContent {
   title: string;
@@ -24,44 +17,37 @@ export interface SummaryFigures {
   periodEnd: Date;
 }
 
-// "Rent", "Rent and Phone", "Rent, Phone and Gym"
-function list(names: readonly string[]): string {
-  if (names.length <= 1) return names[0] ?? '';
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-}
-
 // the Sunday summary: spent against last week, top categories, the daily number
 function summaryBody(f: SummaryFigures): string {
   const { spent, lastWeekSpent } = f.week;
+  const amount = moneyWhole(spent);
   const parts: string[] = [];
-  if (spent === 0) parts.push('Nothing logged this week.');
-  else if (lastWeekSpent === 0) parts.push(`Spent ${formatMoneyWhole(spent)} this week.`);
-  else if (spent === lastWeekSpent) parts.push(`Spent ${formatMoneyWhole(spent)} this week, the same as last week.`);
+  if (spent === 0) parts.push(t('notify.weekNothing'));
+  else if (lastWeekSpent === 0) parts.push(t('notify.weekSpent', { amount }));
+  else if (spent === lastWeekSpent) parts.push(t('notify.weekSame', { amount }));
   else {
-    const gap = formatMoneyWhole(Math.abs(spent - lastWeekSpent));
-    parts.push(`Spent ${formatMoneyWhole(spent)} this week, ${gap} ${spent < lastWeekSpent ? 'less' : 'more'} than last week.`);
+    const gap = moneyWhole(Math.abs(spent - lastWeekSpent));
+    parts.push(t(spent < lastWeekSpent ? 'notify.weekLess' : 'notify.weekMore', { amount, gap }));
   }
-  if (f.topCategoryNames.length > 0) parts.push(`Mostly ${list(f.topCategoryNames)}.`);
-  parts.push(`${formatMoneyWhole(f.perDay)}/day until ${untilLabel(f.periodEnd)}.`);
+  if (f.topCategoryNames.length > 0) parts.push(t('notify.weekMostly', { categories: listLabel(f.topCategoryNames) }));
+  parts.push(t('notify.weekPerDay', { amount: moneyWhole(f.perDay), date: untilLabel(f.periodEnd) }));
   return parts.join(' ');
 }
 
 // title and body for one planned reminder; a summary with no figures yet gets a plain invitation
 export function reminderContent(reminder: Reminder, summary: SummaryFigures | null = null): ReminderContent {
   if (reminder.kind === 'bill') {
-    const due = weekdayLabel(addDays(reminder.date, BILL_REMINDER_DAYS_BEFORE));
+    const day = weekdayLabel(addDays(reminder.date, BILL_REMINDER_DAYS_BEFORE));
     const [first] = reminder.bills;
     if (reminder.bills.length === 1 && first) {
-      return { title: `${first.name} is due ${due}`, body: `${formatMoney(first.amount)}. Your daily number already accounts for it.` };
+      return { title: t('notify.billOne', { bill: first.name, day }), body: t('notify.billOneBody', { amount: money(first.amount) }) };
     }
     const total = reminder.bills.reduce((sum, b) => sum + b.amount, 0);
     return {
-      title: `${reminder.bills.length} bills due ${due}`,
-      body: `${list(reminder.bills.map((b) => b.name))}, ${formatMoney(total)} total. Your daily number already accounts for them.`,
+      title: t('notify.billMany', { count: reminder.bills.length, day }),
+      body: t('notify.billManyBody', { names: listLabel(reminder.bills.map((b) => b.name)), amount: money(total) }),
     };
   }
-  if (reminder.kind === 'checkIn') {
-    return { title: 'Mind checking your balance?', body: "It's been over a week. Takes a few seconds and keeps your number accurate." };
-  }
-  return { title: 'Your week', body: summary ? summaryBody(summary) : 'Tap to see how your week went.' };
+  if (reminder.kind === 'checkIn') return { title: t('notify.checkIn'), body: t('notify.checkInBody') };
+  return { title: t('notify.week'), body: summary ? summaryBody(summary) : t('notify.weekLater') };
 }

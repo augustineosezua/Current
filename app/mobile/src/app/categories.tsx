@@ -12,26 +12,28 @@ import { moveCategory } from '@/db/categories';
 import type { CategoryRecord } from '@/db/records';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
-import { fillFor, KIND_GROUPS } from '@/lib/categories';
+import { t } from '@/i18n';
+import { categoryName, fillFor, KIND_GROUPS } from '@/lib/categories';
 
 // one category: tap it to edit, the arrows to move it up or down within its group
 function CategoryRow({ category, isFirst, isLast }: { category: CategoryRecord; isFirst: boolean; isLast: boolean }) {
   const db = useSQLiteContext();
+  const name = categoryName(category);
   return (
     <View className="min-h-16 flex-row items-center gap-1 py-2 pl-4 pr-2">
       <Link href={{ pathname: '/category', params: { id: category.id } }} asChild>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${category.name}. Edit`}
+          accessibilityLabel={t('common.edit', { label: name })}
           className="flex-1 flex-row items-center gap-3 active:opacity-70">
           <Sticker emoji={category.emoji} fill={fillFor(category.color)} />
           <Text className="flex-1 font-sans-bold text-base text-ink" numberOfLines={1}>
-            {category.name}
+            {name}
           </Text>
         </Pressable>
       </Link>
-      <MoveButton direction="up" label={`Move ${category.name} up`} disabled={isFirst} onPress={() => void moveCategory(db, category.id, 'up')} />
-      <MoveButton direction="down" label={`Move ${category.name} down`} disabled={isLast} onPress={() => void moveCategory(db, category.id, 'down')} />
+      <MoveButton direction="up" label={t('common.moveUp', { name })} disabled={isFirst} onPress={() => void moveCategory(db, category.id, 'up')} />
+      <MoveButton direction="down" label={t('common.moveDown', { name })} disabled={isLast} onPress={() => void moveCategory(db, category.id, 'down')} />
     </View>
   );
 }
@@ -42,11 +44,8 @@ export default function CategoriesScreen() {
   const categories = data ?? [];
 
   return (
-    <Screen header={<BackButton />} title="Categories">
-      <Text className="font-sans text-base leading-6 text-muted">
-        When you log something, you pick one of these. That&apos;s how Activity shows where your money went. Tap one to rename
-        it or change its sticker.
-      </Text>
+    <Screen header={<BackButton />} title={t('categories.title')}>
+      <Text className="font-sans text-base leading-6 text-muted">{t('categories.intro')}</Text>
 
       {KIND_GROUPS.map((group) => {
         const rows = categories.filter((c) => c.kind === group.kind);
@@ -68,10 +67,8 @@ export default function CategoriesScreen() {
         );
       })}
 
-      <Text className="text-center font-sans text-sm leading-5 text-muted">
-        The arrows change the order they show up in when you&apos;re logging something.
-      </Text>
-      <Button label="Add a category" onPress={() => router.push('/category')} />
+      <Text className="text-center font-sans text-sm leading-5 text-muted">{t('categories.arrows')}</Text>
+      <Button label={t('categories.add')} onPress={() => router.push('/category')} />
     </Screen>
   );
 }

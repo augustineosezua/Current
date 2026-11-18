@@ -1,6 +1,6 @@
 # Terms of Use
 
-Effective date: November 16, 2026 · Version 2.0
+Effective date: November 17, 2026 · Version 2.1
 
 > Please read these Terms before using Current. By downloading or using the app, you agree to them. If you don't agree, please don't use Current.
 
@@ -11,7 +11,7 @@ These Terms govern your use of the Current app ("the App"). Current is made by a
 Current is a budgeting tool. You enter your balances, income, bills, goals and transactions, and the App calculates a Safe-to-Spend figure and a daily spending number from them.
 
 - **No account. No bank login.** You don't need an account to use Current, and the App does not connect to your bank.
-- **Your budget lives on your phone.** Your budget data is stored on your device, not on our servers. The Privacy Policy explains the few exceptions: optional cloud AI, anonymous analytics and emails you choose to send us.
+- **Your budget lives on your phone.** Your budget data is stored on your device, not on our servers. The Privacy Policy explains the few exceptions: purchases through Apple, anonymous analytics and emails you choose to send us.
 
 ## 2. The numbers are estimates, not advice
 
@@ -29,11 +29,11 @@ Because your budget is stored on your device, you're responsible for keeping it.
 
 ## 5. Current Plus (purchases)
 
-Current Plus is an optional subscription sold only through Apple's App Store. Apple handles payment, renewal, cancellation, refunds and free trials under its own terms. You can manage or cancel your subscription in your Apple ID settings. Prices are shown in the App Store before you buy. If Plus lapses, the App keeps all of your data and continues to work with the free features.
+Current Plus is an optional subscription sold only through Apple's App Store. Apple handles payment, renewal, cancellation, refunds and free trials under its own terms. You can manage or cancel your subscription in your Apple ID settings. Prices are shown in the App Store before you buy. If Plus lapses, the App keeps all of your data and continues to work with the free features. Plus's AI features (quick add from typed text, "Can I afford this?" explanations, Ask Current and the written weekly recap) need an iPhone that supports Apple Intelligence with it turned on; the rest of Plus works on any iPhone.
 
 ## 6. Acceptable use
 
-Don't use the App to break the law, or try to interfere with, reverse engineer, overload or gain unauthorized access to the App or the services behind it (including the cloud AI service).
+Don't use the App to break the law, or try to interfere with, reverse engineer, overload or gain unauthorized access to the App or the services behind it (including any service we run for it).
 
 ## 7. Intellectual property
 

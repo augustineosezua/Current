@@ -1,4 +1,4 @@
-import { formatMoney, toCents, type Frequency } from '@current/core';
+import { toCents, type Frequency } from '@current/core';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
@@ -14,11 +14,12 @@ import type { AccountRecord, BillRecord, CategoryRecord } from '@/db/records';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
 import { categoriesFor, suggestCategoryId } from '@/lib/categories';
-import { FREQUENCY_LABELS } from '@/lib/format';
+import { t } from '@/i18n';
+import { frequencyLabel, money } from '@/lib/format';
 
 const REPEATS: readonly { value: Frequency; label: string }[] = (
   ['one_time', 'weekly', 'biweekly', 'monthly', 'yearly'] as const
-).map((value) => ({ value, label: FREQUENCY_LABELS[value] }));
+).map((value) => ({ value, label: frequencyLabel(value) }));
 
 interface FormData {
   bill: BillRecord | null;
@@ -86,41 +87,41 @@ function BillForm({ bill, accounts, categories }: FormData) {
       if (!paid) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       toast({
-        message: `Paid ${paid.name}, ${formatMoney(paid.amount)} logged`,
-        actionLabel: 'Undo',
+        message: t('plan.paidToast', { bill: paid.name, amount: money(paid.amount) }),
+        actionLabel: t('common.undo'),
         onAction: () => void markBillUnpaid(db, bill.id),
       });
     });
 
   return (
-    <Sheet title={bill ? 'Edit bill' : 'Add a bill'}>
-      <Field label="What is it?" value={name} onChangeText={setName} placeholder="Rent" autoFocus={!bill} />
-      <AmountField label="How much?" value={amountText} onChangeText={setAmountText} />
-      <DateField label="Next due" value={dueDate} onChange={setDueDate} />
-      <Chips label="Repeats" options={REPEATS} value={frequency} onChange={setFrequency} />
+    <Sheet title={bill ? t('bill.edit') : t('bill.add')}>
+      <Field label={t('common.whatIsIt')} value={name} onChangeText={setName} placeholder={t('bill.placeholder')} autoFocus={!bill} />
+      <AmountField label={t('common.howMuch')} value={amountText} onChangeText={setAmountText} />
+      <DateField label={t('bill.nextDue')} value={dueDate} onChange={setDueDate} />
+      <Chips label={t('bill.repeats')} options={REPEATS} value={frequency} onChange={setFrequency} />
       <CategoryPicker categories={categories} value={categoryId} onChange={setPickedCategory} />
-      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
-      <Button label="Save" onPress={save} disabled={!valid} />
+      {error ? <Text className="font-sans-medium text-base text-ink">{t('common.didntSave', { error })}</Text> : null}
+      <Button label={t('common.save')} onPress={save} disabled={!valid} />
 
       {bill && !bill.isPaid ? (
         <View className="gap-5 border-t-2 border-field pt-5">
-          <Text className="font-display-bold text-xl text-ink">Paid it?</Text>
-          <DateField label="Paid on" value={paidOn} onChange={setPaidOn} />
+          <Text className="font-display-bold text-xl text-ink">{t('bill.paidIt')}</Text>
+          <DateField label={t('bill.paidOn')} value={paidOn} onChange={setPaidOn} />
           {spendable.length > 1 ? (
             <Chips
-              label="From"
+              label={t('bill.from')}
               options={spendable.map((a) => ({ value: a.id, label: a.name }))}
               value={payFrom}
               onChange={setPayFrom}
             />
           ) : null}
-          <Button label="Mark paid" kind="secondary" onPress={pay} />
+          <Button label={t('bill.markPaid')} kind="secondary" onPress={pay} />
         </View>
       ) : null}
       {bill?.isPaid ? (
-        <Button label="Mark unpaid" kind="secondary" onPress={() => run(() => markBillUnpaid(db, bill.id))} />
+        <Button label={t('bill.markUnpaid')} kind="secondary" onPress={() => run(() => markBillUnpaid(db, bill.id))} />
       ) : null}
-      {bill ? <Button label="Delete bill" kind="plain" onPress={() => run(() => deleteBill(db, bill.id))} /> : null}
+      {bill ? <Button label={t('bill.delete')} kind="plain" onPress={() => run(() => deleteBill(db, bill.id))} /> : null}
     </Sheet>
   );
 }

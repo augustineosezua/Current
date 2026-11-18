@@ -39,7 +39,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           {/* springs up from the tab bar, drops away when done */}
           <Animated.View
             key={toast.key}
-            entering={FadeInDown.springify().damping(16).reduceMotion(ReduceMotion.System)}
+            entering={FadeInDown.springify().damping(24).reduceMotion(ReduceMotion.System)}
             exiting={FadeOutDown.duration(180).reduceMotion(ReduceMotion.System)}>
             <View
               accessibilityLiveRegion="polite"

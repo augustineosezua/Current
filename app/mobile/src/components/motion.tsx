@@ -19,29 +19,29 @@ import Animated, {
 const SYSTEM = ReduceMotion.System;
 
 // cap the stagger so long screens don't keep the last card waiting
-const STAGGER_MS = 45;
-const MAX_STAGGER = 6;
+const STAGGER_MS = 30;
+const MAX_STAGGER = 4;
 
 // a screen's blocks rise into place one after another, the first time the screen opens
 export function rise(index: number) {
   return FadeInDown.delay(Math.min(index, MAX_STAGGER) * STAGGER_MS)
     .springify()
-    .damping(18)
-    .stiffness(180)
+    .damping(26)
+    .stiffness(220)
     .reduceMotion(SYSTEM);
 }
 
 // rows added to or removed from a list fade, and the rows around them glide to make room
-export const rowIn = FadeIn.duration(220).reduceMotion(SYSTEM);
-export const rowOut = FadeOut.duration(160).reduceMotion(SYSTEM);
-export const glide = LinearTransition.springify().damping(20).stiffness(200).reduceMotion(SYSTEM);
+export const rowIn = FadeIn.duration(180).reduceMotion(SYSTEM);
+export const rowOut = FadeOut.duration(140).reduceMotion(SYSTEM);
+export const glide = LinearTransition.springify().damping(28).stiffness(260).reduceMotion(SYSTEM);
 
 // stickers pop in with a little overshoot, staggered across a pile
 export function stickerPop(index: number) {
-  return ZoomIn.delay(120 + index * 70)
+  return ZoomIn.delay(80 + index * 45)
     .springify()
-    .damping(11)
-    .stiffness(220)
+    .damping(16)
+    .stiffness(240)
     .reduceMotion(SYSTEM);
 }
 
@@ -55,12 +55,12 @@ export function Row({ children }: { children: ReactNode }) {
 }
 
 // springs the scale down while pressed and back on release; wire `pressIn`/`pressOut` to a Pressable
-export function usePressScale(to = 0.96) {
+export function usePressScale(to = 0.98) {
   const scale = useSharedValue(1);
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
-  const spring = { damping: 15, stiffness: 320, reduceMotion: SYSTEM };
+  const spring = { damping: 22, stiffness: 340, reduceMotion: SYSTEM };
   return {
     style,
     pressIn: () => {
@@ -76,7 +76,7 @@ export function usePressScale(to = 0.96) {
 export function Pop({
   trigger,
   enabled = true,
-  to = 1.25,
+  to = 1.12,
   style,
   children,
 }: {
@@ -105,7 +105,7 @@ export function Pop({
 
 function bounce(scale: SharedValue<number>, to: number) {
   scale.value = withSequence(
-    withSpring(to, { damping: 8, stiffness: 400, reduceMotion: SYSTEM }),
-    withSpring(1, { damping: 10, stiffness: 260, reduceMotion: SYSTEM }),
+    withSpring(to, { damping: 14, stiffness: 420, reduceMotion: SYSTEM }),
+    withSpring(1, { damping: 18, stiffness: 300, reduceMotion: SYSTEM }),
   );
 }

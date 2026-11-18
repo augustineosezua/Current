@@ -9,12 +9,12 @@ import { createAccount, deleteAccount, updateAccount } from '@/db/ledger';
 import type { AccountRecord } from '@/db/records';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
+import { t } from '@/i18n';
 
-const TYPES: readonly { value: AccountType; label: string }[] = [
-  { value: 'chequing', label: 'Chequing' },
-  { value: 'savings', label: 'Savings' },
-  { value: 'cash', label: 'Cash' },
-];
+const TYPES: readonly { value: AccountType; label: string }[] = (['chequing', 'savings', 'cash'] as const).map((value) => ({
+  value,
+  label: t(`accountType.${value}`),
+}));
 
 interface FormData {
   account: AccountRecord | null;
@@ -58,26 +58,22 @@ function AccountForm({ account, count }: FormData) {
   };
 
   return (
-    <Sheet title={account ? 'Edit account' : 'Add an account'}>
-      <Field label="Name" value={name} onChangeText={setName} placeholder="Chequing" autoFocus={!account} />
-      <Chips label="Type" options={TYPES} value={type} onChange={setType} />
-      {type === 'savings' ? (
-        <Text className="font-sans text-base leading-6 text-muted">Savings don&apos;t count toward your daily number.</Text>
-      ) : null}
+    <Sheet title={account ? t('account.edit') : t('account.add')}>
+      <Field label={t('account.name')} value={name} onChangeText={setName} placeholder={t('account.placeholder')} autoFocus={!account} />
+      <Chips label={t('account.type')} options={TYPES} value={type} onChange={setType} />
+      {type === 'savings' ? <Text className="font-sans text-base leading-6 text-muted">{t('account.savingsNote')}</Text> : null}
       <AmountField
-        label={account ? 'Balance' : "What's in it right now?"}
+        label={account ? t('account.balance') : t('account.balanceNew')}
         value={balanceText}
         onChangeText={setBalanceText}
         allowNegative
       />
       {account ? (
-        <Text className="font-sans text-base leading-6 text-muted">
-          Changing this just updates the number. It won&apos;t show up as spending.
-        </Text>
+        <Text className="font-sans text-base leading-6 text-muted">{t('account.balanceNote')}</Text>
       ) : null}
-      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
-      <Button label="Save" onPress={save} disabled={!valid} />
-      {account && count > 1 ? <Button label="Delete account" kind="plain" onPress={remove} /> : null}
+      {error ? <Text className="font-sans-medium text-base text-ink">{t('common.didntSave', { error })}</Text> : null}
+      <Button label={t('common.save')} onPress={save} disabled={!valid} />
+      {account && count > 1 ? <Button label={t('account.delete')} kind="plain" onPress={remove} /> : null}
     </Sheet>
   );
 }

@@ -2,6 +2,8 @@
 
 Every piece of user-facing text in the mobile app, grouped by screen. To change something, prompt with the ID, e.g. "change H4 to 'In the bank'".
 
+**Since Phase 2 (2.6), the strings themselves live in `src/i18n/en.ts` (English, the source) and `src/i18n/fr.ts` (Canadian French).** The IDs below still describe where each line shows. Change English in `en.ts` and French in `fr.ts`; `i18n.test.ts` fails if a French line is missing or loses a `{placeholder}`. The Phase 2 screens are listed at the bottom by their key prefix.
+
 `{curly}` parts are filled in by the app (amounts, dates, names). Keep them unless you want that info gone.
 
 ---
@@ -339,3 +341,20 @@ Every piece of user-facing text in the mobile app, grouped by screen. To change 
 | Q2 | Goal | Second bubble |
 | Q3 | Bill | Third bubble |
 | Q4 | Money in | Bubble nearest the + |
+
+## Phase 2 screens (keys in `src/i18n/en.ts`)
+
+| Prefix | Screen |
+|---|---|
+| `plus.*` | Paywall (`src/app/plus.tsx`), including every feature line and the fine print |
+| `ai.*` | Cloud AI disclosure (`src/app/cloud-ai.tsx`) and the AI-off and failed lines |
+| `afford.*` | Can I afford this? (`src/app/afford.tsx`), including the figure labels given to the model |
+| `limit.*`, `plan.limit*`, `alert.*` | Category limits: the sheet, the Plan section, banners and notifications |
+| `insights.*` | Insights (`src/app/insights.tsx`) |
+| `recap.*`, `notify.weekRecap` | Weekly recap (`src/app/recap.tsx`) |
+| `ask.*` | Ask Current (`src/app/ask.tsx`): suggestions, the decline line and figure labels |
+| `import.*`, `bank.*` | Import (`src/app/import.tsx`) |
+| `appearance.*`, `theme.*`, `icon.*` | Themes and app icons (`src/app/appearance.tsx`) |
+| `add.quick*` | Quick add on the Log spending sheet |
+| `goal.takeOut*`, `goal.paidFor`, `goal.took` | Taking money out of a goal |
+| `settings.plus*`, `settings.cloudAi*` | The Plus and Cloud AI cards in Settings |

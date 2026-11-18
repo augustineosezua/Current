@@ -1,17 +1,19 @@
-import { formatMoney } from '@current/core';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
+import { BudgetBanners } from '@/components/budget-banners';
+import { PlusRow } from '@/components/plus';
 import { PeriodSummary } from '@/components/period-summary';
 import { Row } from '@/components/motion';
 import { Raised } from '@/components/raised';
 import { EmptyState, Screen } from '@/components/screen';
 import { Sticker } from '@/components/sticker';
-import { CHECK_IN_MERCHANT } from '@/db/ledger';
+import { isCheckInEntry } from '@/db/ledger';
 import { toDateString, type CategoryRecord, type TransactionRecord } from '@/db/records';
 import { useSafeToSpend } from '@/db/sts';
-import { fillFor, UNCATEGORIZED } from '@/lib/categories';
-import { dayLabel } from '@/lib/format';
+import { t } from '@/i18n';
+import { categoryName, fillFor, UNCATEGORIZED } from '@/lib/categories';
+import { dayLabel, money } from '@/lib/format';
 
 // consecutive transactions that share a day
 function groupByDay(transactions: readonly TransactionRecord[]): { key: string; date: Date; items: TransactionRecord[] }[] {
@@ -26,16 +28,16 @@ function groupByDay(transactions: readonly TransactionRecord[]): { key: string; 
 }
 
 // the category's sticker, or one for the kind of entry when it has no category
-function stickerFor(t: TransactionRecord, category: CategoryRecord | null): { emoji: string; fill: string } {
+function stickerFor(tx: TransactionRecord, category: CategoryRecord | null): { emoji: string; fill: string } {
   if (category) return { emoji: category.emoji, fill: fillFor(category.color) };
-  if (t.merchantName === CHECK_IN_MERCHANT) return { emoji: '⚖️', fill: 'bg-cat-stone' };
-  if (t.createdFromBill) return { emoji: '🧾', fill: 'bg-cat-sand' };
+  if (isCheckInEntry(tx.merchantName)) return { emoji: '⚖️', fill: 'bg-cat-stone' };
+  if (tx.createdFromBill) return { emoji: '🧾', fill: 'bg-cat-sand' };
   return UNCATEGORIZED;
 }
 
 // one transaction; tapping opens it for editing
 function TransactionRow({
-  transaction: t,
+  transaction: tx,
   category,
   accountName,
 }: {
@@ -43,16 +45,17 @@ function TransactionRow({
   category: CategoryRecord | null;
   accountName: string | null;
 }) {
-  const sticker = stickerFor(t, category);
-  const title = t.merchantName ?? category?.name ?? (t.amount < 0 ? 'Money in' : 'Spending');
+  const sticker = stickerFor(tx, category);
+  const name = category ? categoryName(category) : null;
+  const title = tx.merchantName ?? name ?? (tx.amount < 0 ? t('activity.moneyIn') : t('activity.spending'));
   // category under the name, unless the name already is the category
-  const details = [t.merchantName ? category?.name : null, accountName].filter(Boolean).join(' · ');
-  const amount = t.amount < 0 ? `+${formatMoney(-t.amount)}` : formatMoney(t.amount);
+  const details = [tx.merchantName ? name : null, accountName].filter(Boolean).join(' · ');
+  const amount = tx.amount < 0 ? `+${money(-tx.amount)}` : money(tx.amount);
   return (
-    <Link href={{ pathname: '/add', params: { id: t.id } }} asChild>
+    <Link href={{ pathname: '/add', params: { id: tx.id } }} asChild>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${title}, ${amount}${details ? `, ${details}` : ''}. Edit`}
+        accessibilityLabel={t('common.edit', { label: `${title}, ${amount}${details ? `, ${details}` : ''}` })}
         className="min-h-16 flex-row items-center gap-3 px-4 py-2 active:opacity-70">
         <Sticker emoji={sticker.emoji} fill={sticker.fill} />
         <View className="flex-1">
@@ -73,12 +76,12 @@ export default function ActivityScreen() {
 
   if (error) {
     return (
-      <Screen title="Activity">
-        <EmptyState title="Couldn't load your spending" body={error.message} />
+      <Screen title={t('activity.title')}>
+        <EmptyState title={t('activity.loadError')} body={error.message} />
       </Screen>
     );
   }
-  if (!input || !result) return <Screen title="Activity">{null}</Screen>;
+  if (!input || !result) return <Screen title={t('activity.title')}>{null}</Screen>;
 
   // account names only matter once there is more than one account
   const data = {
@@ -89,7 +92,7 @@ export default function ActivityScreen() {
   const showAccounts = data.accountNames.size > 1;
 
   return (
-    <Screen title="Activity">
+    <Screen title={t('activity.title')}>
       {data.transactions.length === 0 ? (
         <EmptyState
           stickers={[
@@ -97,11 +100,16 @@ export default function ActivityScreen() {
             { emoji: '🚌', fill: 'bg-cat-sky', tilt: 1 },
             { emoji: '🛒', fill: 'bg-cat-mint', tilt: -1 },
           ]}
-          title="Nothing logged yet"
-          body="Hit + when you buy something. Takes about three seconds."
+          title={t('activity.emptyTitle')}
+          body={t('activity.emptyBody')}
         />
       ) : (
-        <PeriodSummary input={input} result={result} />
+        <>
+          <BudgetBanners input={input} result={result} />
+          <PeriodSummary input={input} result={result} />
+          <PlusRow label={t('activity.insights')} from="insights" onOpen={() => router.push('/insights')} />
+          <PlusRow label={t('recap.title')} from="recap" onOpen={() => router.push('/recap')} />
+        </>
       )}
       {data.transactions.length === 0
         ? null
@@ -110,12 +118,12 @@ export default function ActivityScreen() {
               <Text className="font-sans-bold text-sm text-muted">{dayLabel(group.date)}</Text>
               <Raised>
                 <View className="py-1">
-                  {group.items.map((t) => (
-                    <Row key={t.id}>
+                  {group.items.map((tx) => (
+                    <Row key={tx.id}>
                       <TransactionRow
-                        transaction={t}
-                        category={(t.categoryId && data.categories.get(t.categoryId)) || null}
-                        accountName={showAccounts && t.accountId ? (data.accountNames.get(t.accountId) ?? null) : null}
+                        transaction={tx}
+                        category={(tx.categoryId && data.categories.get(tx.categoryId)) || null}
+                        accountName={showAccounts && tx.accountId ? (data.accountNames.get(tx.accountId) ?? null) : null}
                       />
                     </Row>
                   ))}

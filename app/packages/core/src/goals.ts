@@ -89,3 +89,9 @@ export function applyContribution(goal: Goal, amount: Cents, now: Date): Goal {
     lastContributionAt: startOfDay(now),
   };
 }
+
+// 2.4 take money back out of a goal (spent from it, or moved back to spending); never below zero
+export function applyWithdrawal(goal: Goal, amount: Cents): Goal {
+  const saved = Math.max(goal.amountSaved - amount, 0);
+  return { ...goal, amountSaved: saved, isCompleted: !goal.isRecurring && saved >= goal.amount && goal.amount > 0 };
+}

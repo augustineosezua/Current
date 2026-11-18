@@ -16,8 +16,12 @@ export const TABLES = [
   'incomes',
   'goals',
   'term_plans',
+  'category_budgets',
   'settings',
 ] as const;
+
+// tables that stay on this phone and are never synced (ROADMAP 2.13: Ask Current conversations)
+export const LOCAL_ONLY_TABLES = ['ask_messages'] as const;
 
 export type TableName = (typeof TABLES)[number];
 
@@ -35,7 +39,7 @@ function sqlText(value: string): string {
 }
 
 // Defaults use fixed ids and an old fixed timestamp: two devices seed identical rows, and any later edit wins a sync.
-const SEED_TIME = '2026-01-01T00:00:00.000Z';
+export const SEED_TIME = '2026-01-01T00:00:00.000Z';
 const DEFAULT_CATEGORY_ROWS = DEFAULT_CATEGORIES.map(
   (c) =>
     `(${[c.id, SEED_TIME, SEED_TIME, c.name, c.emoji, c.color, c.kind].map(sqlText).join(', ')}, ${c.sortOrder})`,
@@ -126,6 +130,38 @@ export const MIGRATIONS: readonly string[] = [
   `
   INSERT OR IGNORE INTO categories (id, createdAt, updatedAt, name, emoji, color, kind, sortOrder) VALUES
     ${DEFAULT_CATEGORY_ROWS};
+  `,
+  // Phase 2: category limits (2.3, 2.12), purchases a goal paid for (2.4), and Ask Current's history (2.13)
+  `
+  CREATE TABLE category_budgets (${SYNC_COLUMNS},
+    categoryId TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    rollover INTEGER NOT NULL DEFAULT 0,
+    since TEXT NOT NULL
+  );
+  CREATE INDEX category_budgets_category ON category_budgets (categoryId);
+
+  ALTER TABLE transactions ADD COLUMN goalId TEXT;
+
+  -- device only: no sync columns, never pushed anywhere
+  CREATE TABLE ask_messages (
+    id TEXT PRIMARY KEY NOT NULL,
+    createdAt TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('user','assistant')),
+    text TEXT NOT NULL,
+    figures TEXT,
+    backend TEXT
+  );
+  `,
+  `
+  -- Ask Current keeps separate chats: each opening of the screen starts one, and the last one can be reopened.
+  -- Messages from before this have no chat and count as one earlier chat.
+  ALTER TABLE ask_messages ADD COLUMN chatId TEXT;
+  CREATE INDEX ask_messages_chat ON ask_messages (chatId);
+  `,
+  `
+  -- an action Ask Current offers (log this purchase?), saved only when the user taps to confirm
+  ALTER TABLE ask_messages ADD COLUMN action TEXT;
   `,
 ];
 

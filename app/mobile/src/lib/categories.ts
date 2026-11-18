@@ -11,6 +11,8 @@ import {
 } from '@current/core';
 
 import type { CategoryRecord } from '../db/records';
+import { SEED_TIME } from '../db/schema';
+import { t, type MessageKey } from '../i18n';
 
 // literal classes per colour so Tailwind can see them
 export const CATEGORY_FILLS: Record<CategoryColor, string> = {
@@ -36,20 +38,24 @@ export function fillFor(color: string): string {
 // sticker for an entry with no category
 export const UNCATEGORIZED = { emoji: '🏷️', fill: 'bg-field' } as const;
 
-export const KIND_LABELS: Record<CategoryKind, string> = {
-  needs: 'Need',
-  wants: 'Want',
-  savings: 'Savings',
-  income: 'Money in',
-};
+const KINDS: readonly CategoryKind[] = ['needs', 'wants', 'savings', 'income'];
+
+export const KIND_LABELS = Object.fromEntries(KINDS.map((k) => [k, t(`kind.${k}`)])) as Record<CategoryKind, string>;
 
 // the four groups on the Categories screen, in order, with what each one means in plain words
-export const KIND_GROUPS: readonly { kind: CategoryKind; title: string; blurb: string }[] = [
-  { kind: 'needs', title: 'Needs', blurb: 'Stuff you have to pay for, like rent, groceries and getting around.' },
-  { kind: 'wants', title: 'Wants', blurb: 'The fun stuff. Coffee, takeout, shopping, nights out.' },
-  { kind: 'savings', title: 'Savings', blurb: 'Money you move into savings. It never counts as spending.' },
-  { kind: 'income', title: 'Money in', blurb: 'Only shows up when you log money coming in, like a paycheque.' },
-];
+export const KIND_GROUPS: readonly { kind: CategoryKind; title: string; blurb: string }[] = KINDS.map((kind) => ({
+  kind,
+  title: t(`kindGroup.${kind}`),
+  blurb: t(`kindBlurb.${kind}`),
+}));
+
+// a category's name as shown: a starting category nobody has edited is shown in the app's language
+export function categoryName(category: Pick<CategoryRecord, 'id' | 'name' | 'updatedAt'>): string {
+  if (category.updatedAt !== SEED_TIME) return category.name;
+  const key = `defaultCategory.${category.id}` as MessageKey;
+  const translated = t(key);
+  return translated === key ? category.name : translated;
+}
 
 // emoji offered when making or editing a category
 export const CATEGORY_EMOJI = [

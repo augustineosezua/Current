@@ -5,6 +5,8 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useCSSVariable } from 'uniwind';
 
+import { t } from '@/i18n';
+
 import { Pop, usePressScale } from './motion';
 import { Raised } from './raised';
 
@@ -15,7 +17,7 @@ function CloseButton() {
     <Pressable
       onPress={() => router.back()}
       accessibilityRole="button"
-      accessibilityLabel="Close"
+      accessibilityLabel={t('common.close')}
       hitSlop={8}
       className="h-11 w-11 items-center justify-center rounded-full bg-field active:opacity-70">
       <SymbolView name="xmark" size={16} weight="bold" tintColor={ink} />
@@ -25,6 +27,8 @@ function CloseButton() {
 
 // body of a form sheet: title, then fields in a scroll column that keeps taps working over the keyboard
 export function Sheet({ title, children }: { title: string; children: ReactNode }) {
+  // the ScrollView must be the sheet's root: iOS form sheets size themselves from it, and a plain View
+  // wrapper left Goals, Add and the other sheets blank
   return (
     <ScrollView
       className="flex-1 bg-bg"

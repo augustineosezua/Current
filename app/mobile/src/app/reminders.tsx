@@ -12,12 +12,13 @@ import { Screen } from '@/components/screen';
 import { saveSetting } from '@/db/plan';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
+import { t } from '@/i18n';
 import { getReminderPermission, requestReminderPermission, syncReminders, type ReminderPermission } from '@/lib/reminders';
 
 const TOGGLES: readonly { key: keyof ReminderSettings; title: string; body: string }[] = [
-  { key: 'bills', title: 'Bills', body: 'A heads-up 3 days before something’s due.' },
-  { key: 'summary', title: 'Sunday recap', body: 'How your week went, plus your daily number.' },
-  { key: 'checkIn', title: 'Balance check', body: 'A nudge if you haven’t checked your balance in a week.' },
+  { key: 'bills', title: t('reminders.bills'), body: t('reminders.billsBody') },
+  { key: 'summary', title: t('reminders.summary'), body: t('reminders.summaryBody') },
+  { key: 'checkIn', title: t('reminders.checkIn'), body: t('reminders.checkInBody') },
 ];
 
 // one reminder with its switch
@@ -62,34 +63,34 @@ export default function RemindersScreen() {
   const reminders = { ...DEFAULT_REMINDER_SETTINGS, ...settings?.reminders };
 
   return (
-    <Screen header={<BackButton />} title="Reminders">
+    <Screen header={<BackButton />} title={t('reminders.title')}>
       {permission === 'ask' ? (
         <View className="gap-3 rounded-md bg-card p-4">
-          <Text className="font-sans-medium text-base text-ink">Notifications are off right now</Text>
-          <Button label="Turn them on" kind="secondary" onPress={() => void allow()} />
+          <Text className="font-sans-medium text-base text-ink">{t('reminders.off')}</Text>
+          <Button label={t('reminders.turnOn')} kind="secondary" onPress={() => void allow()} />
         </View>
       ) : null}
       {permission === 'denied' ? (
         <View className="gap-3 rounded-md bg-card p-4">
-          <Text className="font-sans-medium text-base text-ink">Notifications are blocked in your iPhone settings</Text>
-          <Button label="Open Settings" kind="secondary" onPress={() => void Linking.openSettings()} />
+          <Text className="font-sans-medium text-base text-ink">{t('reminders.blocked')}</Text>
+          <Button label={t('reminders.openSettings')} kind="secondary" onPress={() => void Linking.openSettings()} />
         </View>
       ) : null}
 
       <Raised>
         <View className="py-1">
-          {TOGGLES.map((t) => (
+          {TOGGLES.map((toggle) => (
             <ToggleRow
-              key={t.key}
-              title={t.title}
-              body={t.body}
-              value={reminders[t.key]}
-              onChange={(on) => void saveSetting(db, 'reminders', { ...reminders, [t.key]: on })}
+              key={toggle.key}
+              title={toggle.title}
+              body={toggle.body}
+              value={reminders[toggle.key]}
+              onChange={(on) => void saveSetting(db, 'reminders', { ...reminders, [toggle.key]: on })}
             />
           ))}
         </View>
       </Raised>
-      <Text className="text-center font-sans text-sm text-muted">Max one a day. They come from your phone, not from us.</Text>
+      <Text className="text-center font-sans text-sm text-muted">{t('reminders.note')}</Text>
     </Screen>
   );
 }

@@ -3,10 +3,12 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { useLiveQuery } from '@/hooks/use-live-query';
 
+import { listCategoryBudgets } from './budgets';
 import {
   fromDateString,
   type AccountRecord,
   type BillRecord,
+  type CategoryBudgetRecord,
   type CategoryRecord,
   type GoalRecord,
   type IncomeRecord,
@@ -25,13 +27,15 @@ export interface BudgetData {
   termPlans: TermPlanRecord[];
   transactions: TransactionRecord[];
   categories: CategoryRecord[];
+  // 2.3 limits; never part of the Safe-to-Spend math
+  categoryBudgets: CategoryBudgetRecord[];
   // stored settings, plus the picked end date as the Date core reads
   settings: Settings & PeriodSettings;
 }
 
 // read every table core needs; core does the math, nothing is written back
 export async function loadStsInput(db: SQLiteDatabase): Promise<BudgetData> {
-  const [accounts, bills, goals, incomes, termPlans, transactions, categories, settings] = await Promise.all([
+  const [accounts, bills, goals, incomes, termPlans, transactions, categories, settings, categoryBudgets] = await Promise.all([
     repo.accounts.list(db),
     repo.bills.list(db),
     repo.goals.list(db),
@@ -40,9 +44,20 @@ export async function loadStsInput(db: SQLiteDatabase): Promise<BudgetData> {
     repo.transactions.list(db),
     repo.categories.list(db),
     repo.getSettings(db),
+    listCategoryBudgets(db),
   ]);
   const periodEndOverride = settings.budgetEndsOn ? fromDateString(settings.budgetEndsOn) : null;
-  return { accounts, bills, goals, incomes, termPlans, transactions, categories, settings: { ...settings, periodEndOverride } };
+  return {
+    accounts,
+    bills,
+    goals,
+    incomes,
+    termPlans,
+    transactions,
+    categories,
+    categoryBudgets,
+    settings: { ...settings, periodEndOverride },
+  };
 }
 
 // the data plus the number computed from it, so a screen never shows one without the other

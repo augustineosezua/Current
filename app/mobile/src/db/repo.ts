@@ -70,6 +70,7 @@ export const bills = table('bills', fromRow.bill, toRow.bill, 'dueDate');
 export const incomes = table('incomes', fromRow.income, toRow.income, 'createdAt');
 export const goals = table('goals', fromRow.goal, toRow.goal, 'priority DESC');
 export const termPlans = table('term_plans', fromRow.termPlan, toRow.termPlan, 'startDate');
+export const categoryBudgets = table('category_budgets', fromRow.categoryBudget, toRow.categoryBudget, 'createdAt');
 
 // all settings, with defaults filled in
 export async function getSettings(db: SQLiteDatabase): Promise<Settings> {

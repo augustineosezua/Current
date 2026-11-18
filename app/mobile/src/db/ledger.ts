@@ -11,11 +11,20 @@ import {
 } from '@current/core';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { t } from '../i18n';
+
 import { notifyChange } from './live';
 import type { AccountRecord, BillRecord, Fields, TransactionRecord } from './records';
 import * as repo from './repo';
 
-export const CHECK_IN_MERCHANT = 'Balance check-in';
+// the name given to entries a balance check-in logs, in the app's language
+export const CHECK_IN_MERCHANT = t('ledger.checkIn');
+const CHECK_IN_NAMES = new Set([t('ledger.checkIn', {}, 'en'), t('ledger.checkIn', {}, 'fr')]);
+
+// true for an entry a balance check-in logged, whichever language the phone was in at the time
+export function isCheckInEntry(merchantName: string | null): boolean {
+  return !!merchantName && CHECK_IN_NAMES.has(merchantName);
+}
 
 export interface TransactionInput {
   accountId: string | null;
@@ -85,6 +94,7 @@ export function addTransaction(db: SQLiteDatabase, input: TransactionInput): Pro
       note: input.note ?? null,
       billId: null,
       createdFromBill: false,
+      goalId: null,
     }),
   );
 }
@@ -93,7 +103,7 @@ export function addTransaction(db: SQLiteDatabase, input: TransactionInput): Pro
 export function editTransaction(db: SQLiteDatabase, id: string, changes: Partial<TransactionInput>): Promise<void> {
   return write(db, async () => {
     const existing = await repo.transactions.get(db, id);
-    if (!existing) throw new Error('That entry is gone.');
+    if (!existing) throw new Error(t('error.entryGone'));
     const accountId = changes.accountId === undefined ? existing.accountId : (changes.accountId ?? undefined);
     const amount = changes.amount ?? existing.amount;
     await adjustBalance(db, existing.accountId, existing.amount);
@@ -135,7 +145,7 @@ export function updateAccount(
 ): Promise<void> {
   return write(db, async () => {
     const account = await repo.accounts.get(db, id);
-    if (!account) throw new Error('That account is gone.');
+    if (!account) throw new Error(t('error.accountGone'));
     const { balance, ...rest } = changes;
     const balanceChanged = balance !== undefined && balance !== account.balance;
     await repo.accounts.update(db, id, {
@@ -162,7 +172,7 @@ export function checkInBalance(
 ): Promise<{ drift: Cents }> {
   return write(db, async () => {
     const account = await repo.accounts.get(db, accountId);
-    if (!account) throw new Error('That account is gone.');
+    if (!account) throw new Error(t('error.accountGone'));
     const drift = getBalanceDrift(account.balance, entered);
 
     // logging the difference moves the balance to the entered amount through the transaction
@@ -176,6 +186,7 @@ export function checkInBalance(
         note: null,
         billId: null,
         createdFromBill: false,
+        goalId: null,
       });
       await repo.accounts.update(db, accountId, { lastCheckInAt: now });
     } else {
@@ -248,6 +259,7 @@ export function markBillPaid(
       accountId: accountId ?? undefined,
       categoryId: bill.categoryId,
       note: null,
+      goalId: null,
     });
     await repo.bills.update(db, billId, { isPaid: true });
 
@@ -307,7 +319,7 @@ export interface OnboardingInput {
 export function completeOnboarding(db: SQLiteDatabase, input: OnboardingInput, now = new Date()): Promise<void> {
   return write(db, async () => {
     await repo.accounts.insert(db, {
-      name: 'Chequing',
+      name: t('ledger.chequing'),
       type: 'chequing',
       balance: assertCents(input.balance, 'balance'),
       isMain: true,

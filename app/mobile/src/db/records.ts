@@ -5,6 +5,7 @@ import type {
   Bill,
   BudgetPeriodKind,
   Category,
+  CategoryBudget,
   CategoryKind,
   Cents,
   Frequency,
@@ -31,11 +32,19 @@ export type AccountRecord = Account & SyncMeta & {
   sortOrder: number;
 };
 export type CategoryRecord = Category & SyncMeta & { emoji: string; color: string; sortOrder: number };
-export type TransactionRecord = Transaction & SyncMeta & { note: string | null; billId: string | null; createdFromBill: boolean };
+export type TransactionRecord = Transaction &
+  SyncMeta & {
+    note: string | null;
+    billId: string | null;
+    createdFromBill: boolean;
+    // the savings goal this entry moved money into or out of, or the goal a purchase was paid from (2.4)
+    goalId: string | null;
+  };
 export type BillRecord = Bill & SyncMeta & { categoryId: string | null; accountId: string | null; previousBillId: string | null };
 export type IncomeRecord = Income & SyncMeta;
 export type GoalRecord = Goal & SyncMeta;
 export type TermPlanRecord = TermPlan & SyncMeta;
+export type CategoryBudgetRecord = CategoryBudget & SyncMeta & { id: string };
 
 // settings keys and their value types, stored as JSON
 export interface Settings {
@@ -49,6 +58,24 @@ export interface Settings {
   backupNudgedAt: string | null;
   // 'YYYY-MM-DD' the user picked for the current budget to end, or null; ignored once it has passed
   budgetEndsOn: string | null;
+  // 2.9: false hides AI features on iPhones that can't run them on the device
+  cloudAi: boolean;
+  // 2.9: ISO time the one-time cloud AI disclosure was shown
+  cloudAiDisclosedAt: string | null;
+  // 2.0: ISO time the free trial was offered at activation (offered once)
+  trialOfferedAt: string | null;
+  // 2.0/2.7: ISO time a paywall was last shown, so the review prompt never follows one
+  paywallShownAt: string | null;
+  // 2.7: ISO time the App Store review prompt was asked for
+  reviewAskedAt: string | null;
+  // 2.3: budget alerts already announced, as core's alert keys
+  budgetAlertsSent: string[];
+  // 2.11: colour theme name ('default' is the Sticker Book palette)
+  theme: string;
+  // the big number on Home: per day, or the whole amount until the budget ends
+  heroAmount: 'perDay' | 'total';
+  // development builds only: pretend Plus is active
+  devPlus: boolean;
 }
 export const DEFAULT_SETTINGS: Settings = {
   budgetPeriod: null,
@@ -57,6 +84,15 @@ export const DEFAULT_SETTINGS: Settings = {
   reminders: { bills: true, summary: true, checkIn: true },
   backupNudgedAt: null,
   budgetEndsOn: null,
+  cloudAi: true,
+  cloudAiDisclosedAt: null,
+  trialOfferedAt: null,
+  paywallShownAt: null,
+  reviewAskedAt: null,
+  budgetAlertsSent: [],
+  theme: 'default',
+  heroAmount: 'perDay',
+  devPlus: false,
 };
 export type SettingKey = keyof Settings;
 
@@ -147,6 +183,7 @@ export const fromRow = {
     note: strOrNull(r.note),
     billId: strOrNull(r.billId),
     createdFromBill: bool(r.createdFromBill),
+    goalId: strOrNull(r.goalId ?? null),
   }),
   bill: (r: Row): BillRecord => ({
     id: str(r.id),
@@ -192,6 +229,14 @@ export const fromRow = {
     endDate: fromDateString(str(r.endDate)),
     isActive: bool(r.isActive),
   }),
+  categoryBudget: (r: Row): CategoryBudgetRecord => ({
+    id: str(r.id),
+    ...meta(r),
+    categoryId: str(r.categoryId),
+    limit: num(r.amount),
+    rollover: bool(r.rollover),
+    since: fromDateString(str(r.since)),
+  }),
 };
 
 // writable fields per table: everything except id and sync columns
@@ -220,6 +265,7 @@ export const toRow = {
       note: t.note,
       billId: t.billId,
       createdFromBill: flag(t.createdFromBill),
+      goalId: t.goalId,
     }),
   bill: (b: Partial<Fields<BillRecord>>): Row =>
     pick(b, {
@@ -260,6 +306,14 @@ export const toRow = {
       startDate: p.startDate && toDateString(p.startDate),
       endDate: p.endDate && toDateString(p.endDate),
       isActive: flag(p.isActive),
+    }),
+  // `limit` is a SQL keyword, so the column is `amount`
+  categoryBudget: (b: Partial<Fields<CategoryBudgetRecord>>): Row =>
+    pick('limit' in b ? { ...b, amount: b.limit } : b, {
+      categoryId: b.categoryId,
+      amount: cents(b.limit),
+      rollover: flag(b.rollover),
+      since: b.since && toDateString(b.since),
     }),
 };
 

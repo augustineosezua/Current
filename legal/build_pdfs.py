@@ -12,7 +12,21 @@ from fpdf.fonts import FontFace
 
 HERE = Path(__file__).parent
 OUT = HERE.parent / "app" / "web" / "public" / "legal"
-FONTS = Path("C:/Windows/Fonts")
+# Arial lives in different places on Windows and macOS
+FONTS = next(
+    (p for p in (Path("C:/Windows/Fonts"), Path("/System/Library/Fonts/Supplemental"), Path("/Library/Fonts")) if (p / "Arial.ttf").exists() or (p / "arial.ttf").exists()),
+    Path("C:/Windows/Fonts"),
+)
+
+
+def font(name: str) -> str:
+    """Path to a font file by its Windows name, or the macOS file with the same face."""
+    mac = {"arial.ttf": "Arial.ttf", "arialbd.ttf": "Arial Bold.ttf", "ariali.ttf": "Arial Italic.ttf", "arialbi.ttf": "Arial Bold Italic.ttf"}
+    for candidate in (name, mac.get(name, name)):
+        for f in FONTS.iterdir():
+            if f.name.lower() == candidate.lower():
+                return str(f)
+    return str(FONTS / name)
 
 DOCS = [
     # source, output, short title, accent, light accent
@@ -35,10 +49,10 @@ class LegalPDF(FPDF):
         self.accent = accent
         self.set_margins(22, 24, 22)
         self.set_auto_page_break(True, margin=24)
-        self.add_font("Arial", "", str(FONTS / "arial.ttf"))
-        self.add_font("Arial", "B", str(FONTS / "arialbd.ttf"))
-        self.add_font("Arial", "I", str(FONTS / "ariali.ttf"))
-        self.add_font("Arial", "BI", str(FONTS / "arialbi.ttf"))
+        self.add_font("Arial", "", font("arial.ttf"))
+        self.add_font("Arial", "B", font("arialbd.ttf"))
+        self.add_font("Arial", "I", font("ariali.ttf"))
+        self.add_font("Arial", "BI", font("arialbi.ttf"))
 
     def header(self):
         if self.page_no() == 1:

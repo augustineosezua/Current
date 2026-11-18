@@ -1,4 +1,4 @@
-import { formatMoney, getTermPlanSummary, toCents } from '@current/core';
+import { getTermPlanSummary, toCents } from '@current/core';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
@@ -10,13 +10,17 @@ import { deleteTermPlan, saveTermPlan } from '@/db/plan';
 import type { TermPlanRecord } from '@/db/records';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
-import { monthDayLabel } from '@/lib/format';
+import { t } from '@/i18n';
+import { money, monthDayLabel } from '@/lib/format';
+import { afterTermPlan } from '@/lib/milestones';
+import { usePlus } from '@/lib/plus';
 import { termPreset } from '@/lib/term';
 
 // add or edit term money: a lump sum and the dates it has to last between
 function TermPlanForm({ plan }: { plan: TermPlanRecord | null }) {
   const db = useSQLiteContext();
   const preset = termPreset();
+  const isPlus = usePlus();
   const [name, setName] = useState(plan?.name ?? '');
   const [amountText, setAmountText] = useState(plan ? (plan.amount / 100).toFixed(2) : '');
   const [startDate, setStartDate] = useState<Date | null>(plan?.startDate ?? null);
@@ -43,34 +47,40 @@ function TermPlanForm({ plan }: { plan: TermPlanRecord | null }) {
     }
   };
 
-  // create or update; an empty name takes the storefront's preset
-  const save = () =>
-    run(async () => {
-      if (!valid || !startDate || !endDate) return;
-      await saveTermPlan(db, plan?.id ?? null, { name: name.trim() || preset.name, amount, startDate, endDate });
-    });
+  // create or update; an empty name takes the storefront's preset. A first plan can bring the trial offer (2.0)
+  const save = async () => {
+    if (!valid || !startDate || !endDate) return;
+    try {
+      await saveTermPlan(db, plan?.id ?? null, { name: name.trim() || preset.name, amount, startDate, endDate }, new Date(), isPlus);
+      const milestone = plan ? null : await afterTermPlan(db).catch(() => null);
+      if (milestone === 'trial') router.replace({ pathname: '/plus', params: { from: 'activation' } });
+      else router.back();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   return (
-    <Sheet title={plan ? 'Edit semester money' : 'Add semester money'}>
+    <Sheet title={plan ? t('term.edit') : t('term.add')}>
       <Text className="font-sans text-base leading-6 text-muted">{preset.hint}</Text>
-      <Field label="What is it?" value={name} onChangeText={setName} placeholder={preset.name} />
-      <AmountField label="How much?" value={amountText} onChangeText={setAmountText} autoFocus={!plan} />
-      <DateField label="Starts" value={startDate} onChange={setStartDate} />
-      <DateField label="Has to last until" value={endDate} onChange={setEndDate} />
+      <Field label={t('common.whatIsIt')} value={name} onChangeText={setName} placeholder={preset.name} />
+      <AmountField label={t('common.howMuch')} value={amountText} onChangeText={setAmountText} autoFocus={!plan} />
+      <DateField label={t('term.starts')} value={startDate} onChange={setStartDate} />
+      <DateField label={t('term.until')} value={endDate} onChange={setEndDate} />
       {startDate && endDate && !ordered ? (
-        <Text className="font-sans-medium text-base text-ink">The end date needs to be after the start.</Text>
+        <Text className="font-sans-medium text-base text-ink">{t('error.endAfterStart')}</Text>
       ) : null}
       {preview ? (
         <Text className="font-sans-medium text-base leading-6 text-ink">
-          That works out to about {formatMoney(preview.perWeek)} a week till {monthDayLabel(preview.endDate)}.
+          {t('term.preview', { amount: money(preview.perWeek), date: monthDayLabel(preview.endDate) })}
         </Text>
       ) : null}
       <Text className="font-sans text-base leading-6 text-muted">
-        Once it hits your account, include it in your balance. We&apos;ll hold back the part that&apos;s for later weeks.
+        {t('term.note')}
       </Text>
-      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
-      <Button label="Save" onPress={save} disabled={!valid} />
-      {plan ? <Button label="Delete semester money" kind="plain" onPress={() => run(() => deleteTermPlan(db, plan.id))} /> : null}
+      {error ? <Text className="font-sans-medium text-base text-ink">{t('common.didntSave', { error })}</Text> : null}
+      <Button label={t('common.save')} onPress={() => void save()} disabled={!valid} />
+      {plan ? <Button label={t('term.delete')} kind="plain" onPress={() => run(() => deleteTermPlan(db, plan.id))} /> : null}
     </Sheet>
   );
 }

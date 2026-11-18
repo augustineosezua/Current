@@ -16,6 +16,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useCSSVariable } from 'uniwind';
 
+import { t } from '@/i18n';
+
 import { Glass } from './glass';
 import { Pop } from './motion';
 import { Sticker } from './sticker';
@@ -26,14 +28,14 @@ const TABS: {
   icon: SFSymbol;
   iconSelected: SFSymbol;
 }[] = [
-  { name: 'index', label: 'Home', icon: 'house', iconSelected: 'house.fill' },
+  { name: 'index', label: t('tab.home'), icon: 'house', iconSelected: 'house.fill' },
   {
     name: 'activity',
-    label: 'Activity',
+    label: t('tab.activity'),
     icon: 'list.bullet',
     iconSelected: 'list.bullet',
   },
-  { name: 'plan', label: 'Plan', icon: 'calendar', iconSelected: 'calendar' },
+  { name: 'plan', label: t('tab.plan'), icon: 'calendar', iconSelected: 'calendar' },
 ];
 
 // half of iOS's ~500ms context-menu hold
@@ -48,15 +50,15 @@ const BUBBLE_SIZE = 56;
 // covers the screen. Tapping + already logs spending; payday and accounts live in Settings.
 const QUICK_ADD: { label: string; emoji: string; fill: string; href: Href }[] = [
   {
-    label: 'Semester money',
+    label: t('quick.term'),
     emoji: '🎓',
     fill: 'bg-cat-lilac',
     href: '/term-plan',
   },
-  { label: 'Goal', emoji: '🎯', fill: 'bg-cat-butter', href: '/goal' },
-  { label: 'Bill', emoji: '🧾', fill: 'bg-cat-sand', href: '/bill' },
+  { label: t('quick.goal'), emoji: '🎯', fill: 'bg-cat-butter', href: '/goal' },
+  { label: t('quick.bill'), emoji: '🧾', fill: 'bg-cat-sand', href: '/bill' },
   {
-    label: 'Money in',
+    label: t('quick.moneyIn'),
     emoji: '💸',
     fill: 'bg-cat-mint',
     href: { pathname: '/add', params: { direction: 'in' } },
@@ -91,7 +93,7 @@ function TabButton({
       accessibilityRole="tab"
       accessibilityState={{ selected: !!isFocused }}
       className="flex-1 items-center justify-center gap-0.5">
-      <Pop trigger={isFocused} enabled={!!isFocused} to={1.2}>
+      <Pop trigger={isFocused} enabled={!!isFocused} to={1.1}>
         <SymbolView name={isFocused ? iconSelected : icon} size={22} tintColor={isFocused ? ink : muted} />
       </Pop>
       <Text className={`text-[11px] ${isFocused ? 'font-sans-bold text-ink' : 'font-sans-medium text-muted'}`}>{label}</Text>
@@ -108,15 +110,15 @@ function QuickAdd({ onPick }: { onPick: (href: Href) => void }) {
         <Animated.View
           key={item.label}
           // rise from the button, nearest first
-          entering={FadeInDown.delay((last - i) * 35)
+          entering={FadeInDown.delay((last - i) * 25)
             .springify()
-            .damping(16)
+            .damping(24)
             .reduceMotion(ReduceMotion.System)}
           exiting={FadeOutDown.duration(120).reduceMotion(ReduceMotion.System)}>
           <Pressable
             onPress={() => onPick(item.href)}
             accessibilityRole="button"
-            accessibilityLabel={`Add ${item.label.toLowerCase()}`}
+            accessibilityLabel={t('quick.add', { item: item.label.toLowerCase() })}
             className="flex-row items-center justify-end gap-3 active:opacity-70">
             <Glass radius={18} style={styles.label}>
               <Text className="font-sans-bold text-base text-ink">{item.label}</Text>
@@ -141,7 +143,7 @@ export function TabBar() {
   const turn = useSharedValue(0);
   useEffect(() => {
     turn.value = withSpring(open ? 1 : 0, {
-      damping: 15,
+      damping: 22,
       reduceMotion: ReduceMotion.System,
     });
   }, [open, turn]);
@@ -165,7 +167,7 @@ export function TabBar() {
           entering={FadeIn.duration(150).reduceMotion(ReduceMotion.System)}
           exiting={FadeOut.duration(150).reduceMotion(ReduceMotion.System)}
           style={styles.backdrop}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setOpen(false)} style={StyleSheet.absoluteFill} />
+          <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')} onPress={() => setOpen(false)} style={StyleSheet.absoluteFill} />
         </Animated.View>
       ) : null}
 
@@ -190,9 +192,9 @@ export function TabBar() {
           delayLongPress={HOLD_MS}
           onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
           accessibilityRole="button"
-          accessibilityLabel={open ? 'Close' : 'Log spending'}
-          accessibilityHint={open ? undefined : 'Press and hold to add a bill, goal or something else'}
-          accessibilityActions={[{ name: 'longpress', label: 'Add a bill, goal or something else' }]}
+          accessibilityLabel={open ? t('common.close') : t('tab.logSpending')}
+          accessibilityHint={open ? undefined : t('tab.holdHint')}
+          accessibilityActions={[{ name: 'longpress', label: t('tab.holdAction') }]}
           onAccessibilityAction={(e) => {
             if (e.nativeEvent.actionName === 'longpress') openMenu();
           }}

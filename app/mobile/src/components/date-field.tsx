@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { t } from '@/i18n';
+
 import { dayLabel, monthLabel } from '@/lib/format';
 
 import { Label } from './form';
 
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const WEEKDAYS = t('common.weekdayInitials').split(',');
 
 // the 42 days shown for a month, starting on the Sunday on or before the 1st
 function monthGrid(month: Date): Date[] {
@@ -53,9 +55,9 @@ export function DateField({
       <Pressable
         onPress={() => setOpen(!open)}
         accessibilityRole="button"
-        accessibilityLabel={`${label}: ${value ? dayLabel(value) : 'not set'}`}
+        accessibilityLabel={`${label}: ${value ? dayLabel(value) : t('common.notSet')}`}
         className="min-h-13 justify-center rounded-sm bg-field px-4">
-        <Text className={`font-sans-medium text-lg ${value ? 'text-ink' : 'text-muted'}`}>{value ? dayLabel(value) : 'Pick a date'}</Text>
+        <Text className={`font-sans-medium text-lg ${value ? 'text-ink' : 'text-muted'}`}>{value ? dayLabel(value) : t('common.pickDate')}</Text>
       </Pressable>
 
       {open ? (
@@ -63,13 +65,13 @@ export function DateField({
           <View className="flex-row items-center justify-between">
             <MonthArrow
               icon="chevron.left"
-              label="Previous month"
+              label={t('common.previousMonth')}
               onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
             />
             <Text className="font-display-bold text-lg text-ink">{monthLabel(month)}</Text>
             <MonthArrow
               icon="chevron.right"
-              label="Next month"
+              label={t('common.nextMonth')}
               onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
             />
           </View>

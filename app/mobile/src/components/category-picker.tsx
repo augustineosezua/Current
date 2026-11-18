@@ -1,13 +1,14 @@
 import { Pressable, Text, View } from 'react-native';
 
 import type { CategoryRecord } from '@/db/records';
-import { fillFor } from '@/lib/categories';
+import { t } from '@/i18n';
+import { categoryName, fillFor } from '@/lib/categories';
 
 import { Label } from './form';
 
 // single-choice category chips; tapping the chosen one clears it
 export function CategoryPicker({
-  label = 'Category',
+  label = t('common.category'),
   categories,
   value,
   onChange,
@@ -29,11 +30,11 @@ export function CategoryPicker({
               key={c.id}
               onPress={() => onChange(selected ? null : c.id)}
               accessibilityRole="button"
-              accessibilityLabel={c.name}
+              accessibilityLabel={categoryName(c)}
               accessibilityState={{ selected }}
               className={`min-h-11 flex-row items-center gap-2 rounded-full border-2 px-4 ${selected ? `border-ink ${fillFor(c.color)}` : 'border-transparent bg-field active:opacity-70'}`}>
               <Text className="text-base">{c.emoji}</Text>
-              <Text className={`text-base ${selected ? 'font-sans-bold text-on-brand' : 'font-sans-medium text-ink'}`}>{c.name}</Text>
+              <Text className={`text-base ${selected ? 'font-sans-bold text-on-brand' : 'font-sans-medium text-ink'}`}>{categoryName(c)}</Text>
             </Pressable>
           );
         })}

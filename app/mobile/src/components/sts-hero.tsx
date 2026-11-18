@@ -1,8 +1,10 @@
-import { formatMoneyWhole, getStsMood, type StsMood, type StsResult } from '@current/core';
+import { getStsMood, type StsMood, type StsResult } from '@current/core';
 import { Text, View } from 'react-native';
 
+import type { Settings } from '@/db/records';
 import { useCountUp } from '@/hooks/use-count-up';
-import { untilLabel } from '@/lib/format';
+import { t } from '@/i18n';
+import { moneyWhole, shortDate, untilLabel } from '@/lib/format';
 
 import { Raised } from './raised';
 
@@ -13,42 +15,54 @@ const MOOD_CLASSES: Record<StsMood, { surface: string; text: string; tilt: strin
   zero: { surface: 'bg-zero', text: 'text-on-zero', tilt: 'rotate-0' },
 };
 
-const shortDate = new Intl.DateTimeFormat('en-CA', {
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-});
-
-// one line of copy per mood: short, second person, never guilt
+// one line of copy per mood: short, second person, never guilt (used by notifications and screen readers)
 export function moodLine(result: StsResult, mood: StsMood): string {
-  const day = untilLabel(result.daily.periodEnd);
-  const total = formatMoneyWhole(result.safeToSpend);
-  if (mood === 'comfortable') return `You're good. That's ${total} to last you till ${day}.`;
-  if (mood === 'tight') return `Bit tight, but you'll make it to ${day}. ${total} total.`;
-  const next = result.availableAfter;
-  return next && next.amount > 0
-    ? `Nothing spare right now. About ${formatMoneyWhole(next.amount)} opens up ${shortDate.format(next.date)}.`
-    : 'Nothing spare right now.';
+  const date = untilLabel(result.daily.periodEnd);
+  const total = moneyWhole(result.safeToSpend);
+  if (mood === 'comfortable') return t('hero.comfortable', { total, date });
+  if (mood === 'tight') return t('hero.tight', { total, date });
+  return zeroLine(result);
 }
 
-// the home headline: daily Safe-to-Spend on a sticker card whose colour follows its mood
-export function StsHero({ result }: { result: StsResult }) {
+// with nothing spare, say when money opens up instead of showing a second zero
+function zeroLine(result: StsResult): string {
+  const next = result.availableAfter;
+  return next && next.amount > 0
+    ? t('hero.zeroWithNext', { amount: moneyWhole(next.amount), date: shortDate(next.date) })
+    : t('hero.zero');
+}
+
+// the home headline on a sticker card whose colour follows its mood. The big number is per day or the whole
+// amount until the budget ends (a setting), the line under it is the other one, and the end date sits top right.
+export function StsHero({ result, show = 'perDay' }: { result: StsResult; show?: Settings['heroAmount'] }) {
   const mood = getStsMood(result);
   const c = MOOD_CLASSES[mood];
   const perDay = useCountUp(result.daily.perDay);
+  const total = useCountUp(result.safeToSpend);
+  const byDay = show === 'perDay';
+  const until = t('hero.until', { date: shortDate(result.daily.periodEnd) });
+  const other =
+    mood === 'zero' ? zeroLine(result) : byDay ? t('hero.otherTotal', { amount: moneyWhole(total) }) : t('hero.otherPerDay', { amount: moneyWhole(perDay) });
 
   return (
     <Raised shape="rounded-lg" surface={c.surface} className={c.tilt}>
       <View
         className="gap-2 p-6"
         accessible
-        accessibilityLabel={`Safe to spend today: ${formatMoneyWhole(result.daily.perDay)} a day. ${moodLine(result, mood)}`}>
-        <Text className={`font-sans-bold text-base ${c.text}`}>Safe to spend today</Text>
+        accessibilityLabel={t(byDay ? 'hero.a11y' : 'hero.a11yTotal', {
+          amount: moneyWhole(byDay ? result.daily.perDay : result.safeToSpend),
+          date: untilLabel(result.daily.periodEnd),
+          line: other,
+        })}>
+        <View className="flex-row items-baseline justify-between gap-3">
+          <Text className={`shrink font-sans-bold text-base ${c.text}`}>{byDay ? t('hero.title') : t('hero.titleTotal')}</Text>
+          <Text className={`font-sans-bold text-sm opacity-80 ${c.text}`}>{until}</Text>
+        </View>
         <Text className={`font-display text-sts tabular-nums tracking-tighter ${c.text}`} numberOfLines={1} adjustsFontSizeToFit>
-          {formatMoneyWhole(perDay)}
-          <Text className="font-display-bold text-3xl tracking-normal">/day</Text>
+          {moneyWhole(byDay ? perDay : total)}
+          {byDay ? <Text className="font-display-bold text-3xl tracking-normal">{t('hero.perDay')}</Text> : null}
         </Text>
-        <Text className={`font-sans-medium text-lg leading-6 ${c.text}`}>{moodLine(result, mood)}</Text>
+        <Text className={`font-sans-bold text-xl tabular-nums ${c.text}`}>{other}</Text>
       </View>
     </Raised>
   );

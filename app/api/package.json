@@ -7,25 +7,28 @@
   },
   "type": "module",
   "dependencies": {
-    "better-auth": "^1.5.5",
-    "express-session": "^1.19.0",
-    "prisma": "^7.5.0",
+    "@anthropic-ai/sdk": "^1.9.0",
     "@better-auth/prisma-adapter": "^1.5.5",
-    "tsx": "^4.19.3",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@prisma/extension-accelerate": "^3.0.1",
+    "better-auth": "^1.5.5",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
+    "express-session": "^1.19.0",
     "pg": "^8.20.0",
     "plaid": "^41.4.0",
-    "resend": "^6.12.2"
+    "prisma": "^7.5.0",
+    "resend": "^6.12.2",
+    "tsx": "^4.19.3"
   },
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts"
+    "start": "tsx src/server.ts",
+    "start:ai": "tsx src/ai-server.ts",
+    "dev:ai": "tsx watch src/ai-server.ts"
   }
 }

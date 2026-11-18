@@ -10,11 +10,12 @@ import { deleteIncome, saveIncome } from '@/db/plan';
 import type { IncomeRecord } from '@/db/records';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
-import { FREQUENCY_LABELS } from '@/lib/format';
+import { t } from '@/i18n';
+import { frequencyLabel } from '@/lib/format';
 
 const FREQUENCIES: readonly { value: Frequency; label: string }[] = (
   ['weekly', 'biweekly', 'semimonthly', 'monthly', 'one_time'] as const
-).map((value) => ({ value, label: FREQUENCY_LABELS[value] }));
+).map((value) => ({ value, label: frequencyLabel(value) }));
 
 // add or edit a payday; the date shown is always the next one coming up
 function IncomeForm({ income }: { income: IncomeRecord | null }) {
@@ -46,17 +47,15 @@ function IncomeForm({ income }: { income: IncomeRecord | null }) {
     });
 
   return (
-    <Sheet title={income ? 'Edit payday' : 'Add a payday'}>
-      <Field label="What is it?" value={name} onChangeText={setName} placeholder="Part-time job" />
-      <AmountField label="How much?" value={amountText} onChangeText={setAmountText} autoFocus={!income} />
-      <Chips label="How often?" options={FREQUENCIES} value={frequency} onChange={setFrequency} />
-      <DateField label="Next payday" value={date} onChange={setDate} />
-      <Text className="font-sans text-base leading-6 text-muted">
-        This doesn&apos;t get added to your balance on its own. Log it with + when it comes in.
-      </Text>
-      {error ? <Text className="font-sans-medium text-base text-ink">That didn&apos;t save: {error}</Text> : null}
-      <Button label="Save" onPress={save} disabled={!valid} />
-      {income ? <Button label="Delete payday" kind="plain" onPress={() => run(() => deleteIncome(db, income.id))} /> : null}
+    <Sheet title={income ? t('income.edit') : t('income.add')}>
+      <Field label={t('common.whatIsIt')} value={name} onChangeText={setName} placeholder={t('income.placeholder')} />
+      <AmountField label={t('common.howMuch')} value={amountText} onChangeText={setAmountText} autoFocus={!income} />
+      <Chips label={t('income.howOften')} options={FREQUENCIES} value={frequency} onChange={setFrequency} />
+      <DateField label={t('income.nextPayday')} value={date} onChange={setDate} />
+      <Text className="font-sans text-base leading-6 text-muted">{t('income.note')}</Text>
+      {error ? <Text className="font-sans-medium text-base text-ink">{t('common.didntSave', { error })}</Text> : null}
+      <Button label={t('common.save')} onPress={save} disabled={!valid} />
+      {income ? <Button label={t('income.delete')} kind="plain" onPress={() => run(() => deleteIncome(db, income.id))} /> : null}
     </Sheet>
   );
 }
