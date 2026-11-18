@@ -298,11 +298,11 @@ export const fr: Record<MessageKey, string> = {
 
   'term.add': "Ajouter de l'argent de session",
   'term.edit': "Modifier l'argent de session",
-  'term.hint.CA': "Le RAFEO, une bourse, une paie de stage. De l'argent qui rentre une fois et doit durer toute la session.",
+  'term.hint.CA': "Un prêt étudiant, une bourse, une paie de stage. De l'argent qui rentre une fois et doit durer toute la session.",
   'term.hint.US': "Un remboursement d'aide financière ou une bourse. De l'argent qui rentre une fois et doit durer toute la session.",
   'term.hint.GB': "Un prêt d'entretien ou une bourse. De l'argent qui rentre une fois et doit durer tout le trimestre.",
   'term.hint.OTHER': "Un prêt, une subvention ou une bourse. De l'argent qui rentre une fois et doit durer toute la session.",
-  'term.name.CA': 'RAFEO',
+  'term.name.CA': 'Prêt étudiant',
   'term.name.US': "Remboursement d'aide financière",
   'term.name.GB': "Prêt d'entretien",
   'term.name.OTHER': 'Argent de session',

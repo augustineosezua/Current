@@ -88,7 +88,7 @@ describe('term money', () => {
   });
 
   it('names the plan for the storefront', () => {
-    expect(termPreset('CA').name).toBe('OSAP');
+    expect(termPreset('CA').name).toBe('Student loan');
     expect(termPreset('US').name).toBe('Financial aid refund');
     expect(termPreset('GB').name).toBe('Maintenance loan');
   });

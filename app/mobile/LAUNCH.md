@@ -43,32 +43,40 @@ The trial is offered once, at activation (after the 5th logged entry or the firs
 
 Limits: name 30 characters, subtitle 30, keywords 100 (comma-separated, no spaces after commas). Apple already indexes the name and subtitle, so the keywords field doesn't repeat their words.
 
-### Canada, English
+Entered in App Store Connect on November 18, 2026, with a general student pitch (no OSAP or RAFEO). The full descriptions and promotional text are in App Store Connect; each description ends with the auto-renewal terms and the privacy and terms links Apple requires.
+
+Apple won't let two localizations of this app share a name: the first one saved keeps it. So English (Canada) is "Current: Student Budget", English (U.K.) is "Current: Daily Student Budget", and English (U.S.) still needs a third name.
+
+### Canada, English (primary)
 
 - **Name:** Current: Student Budget
-- **Subtitle:** OSAP & paycheque budget
-- **Keywords:** `money,tracker,spending,daily,allowance,bills,savings,expense,semester,college,university,osap,simple`
-- **First screenshot:** the daily number, with "No account. No bank login." above it.
+- **Subtitle:** Know what you can spend today
+- **Keywords:** `money,tracker,spending,allowance,bills,savings,expense,semester,college,university,loan,paycheque`
+- **Promotional text:** Know what you can spend today. No account, no bank login. Made for students juggling loans, part-time pay and semester money.
 
 ### Canada, French (fr-CA)
 
 - **Name:** Current : budget étudiant
 - **Subtitle:** Budget de paie et de session
-- **Keywords:** `argent,dépenses,quotidien,factures,épargne,rafeo,université,cégep,suivi,simple,allocation`
-- **First screenshot:** "Pas de compte. Pas de connexion bancaire."
-
-### United States
-
-- **Name:** Current: Student Budget
-- **Subtitle:** Financial aid & paycheck plan
-- **Keywords:** `refund,student,loan,money,tracker,spending,daily,allowance,bills,savings,college,semester,simple`
-- **First screenshot:** "No account. No bank login."
+- **Keywords:** `argent,dépenses,quotidien,factures,épargne,prêt,bourse,université,cégep,suivi,simple,allocation`
+- **Promotional text:** Sache combien tu peux dépenser aujourd'hui. Pas de compte, pas de connexion bancaire. Pensé pour les étudiants, entre prêts, paie et argent de session.
 
 ### United Kingdom
 
-- **Name:** Current: Student Budget
-- **Subtitle:** Maintenance loan budget
-- **Keywords:** `uni,student,finance,money,tracker,spending,daily,bills,savings,term,allowance,simple,planner`
-- **First screenshot:** "No account. No bank login."
+- **Name:** Current: Daily Student Budget
+- **Subtitle:** Know what you can spend today
+- **Keywords:** `money,tracker,spending,allowance,bills,savings,expense,term,uni,loan,finance,payday,planner`
+- **Promotional text:** Know what you can spend today. No account, no bank login. Made for students juggling loans, part-time pay and term money.
 
-Every other English storefront uses the US listing. Record each monthly title or subtitle test in the keyword log at the bottom of `ROADMAP.md` (3.1).
+### United States (not yet in App Store Connect)
+
+- **Name:** to be decided (both names above are taken by the other localizations)
+- **Subtitle:** Know what you can spend today
+- **Keywords:** `money,tracker,spending,allowance,bills,savings,expense,semester,college,loan,paycheck,refund`
+- **Promotional text:** Know what you can spend today. No account, no bank login. Made for students juggling loans, part-time pay and semester money.
+
+### Screenshots
+
+The first screenshot is the daily number with "No account. No bank login." above it ("Pas de compte. Pas de connexion bancaire." in French).
+
+Storefronts without their own localization show the primary English (Canada) listing. Record each monthly title or subtitle test in the keyword log at the bottom of `ROADMAP.md` (3.1).

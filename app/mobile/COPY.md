@@ -195,11 +195,11 @@ Every piece of user-facing text in the mobile app, grouped by screen. To change 
 | ID | Text | Where |
 |----|------|-------|
 | M1 | Add semester money / Edit semester money | Sheet title |
-| M2 | OSAP, a scholarship, co-op pay. Money that comes in once and has to last the whole semester. | Intro in Canada |
+| M2 | A student loan, a scholarship, co-op pay. Money that comes in once and has to last the whole semester. | Intro in Canada |
 | M3 | A financial aid refund or a scholarship. Money that comes in once and has to last the whole semester. | Intro in the US |
 | M4 | A maintenance loan or a bursary. Money that comes in once and has to last the whole term. (UK students say term.) | Intro in the UK |
 | M5 | A loan, grant or scholarship. Money that comes in once and has to last the whole semester. | Intro elsewhere |
-| M6 | OSAP / Financial aid refund / Maintenance loan / Semester money | Name placeholder, and the name used if left empty |
+| M6 | Student loan / Financial aid refund / Maintenance loan / Semester money | Name placeholder, and the name used if left empty |
 | M7 | What is it? / How much? / Starts / Has to last until | Field labels |
 | M8 | The end date needs to be after the start. | Shown when the dates are the wrong way round |
 | M9 | That works out to about {amount} a week till {date}. | Preview once the form is filled in |

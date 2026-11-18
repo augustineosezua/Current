@@ -13,7 +13,10 @@
         "dark": "./assets/images/icon-dark.png"
       },
       "bundleIdentifier": "com.chickenlabs.current",
-      "appleTeamId": "2LYTKB74QB"
+      "appleTeamId": "2LYTKB74QB",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {

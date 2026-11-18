@@ -316,11 +316,11 @@ export const en = {
   // Semester money sheet
   'term.add': 'Add semester money',
   'term.edit': 'Edit semester money',
-  'term.hint.CA': 'OSAP, a scholarship, co-op pay. Money that comes in once and has to last the whole semester.',
+  'term.hint.CA': 'A student loan, a scholarship, co-op pay. Money that comes in once and has to last the whole semester.',
   'term.hint.US': 'A financial aid refund or a scholarship. Money that comes in once and has to last the whole semester.',
   'term.hint.GB': 'A maintenance loan or a bursary. Money that comes in once and has to last the whole term.',
   'term.hint.OTHER': 'A loan, grant or scholarship. Money that comes in once and has to last the whole semester.',
-  'term.name.CA': 'OSAP',
+  'term.name.CA': 'Student loan',
   'term.name.US': 'Financial aid refund',
   'term.name.GB': 'Maintenance loan',
   'term.name.OTHER': 'Semester money',
