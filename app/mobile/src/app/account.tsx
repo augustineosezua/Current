@@ -10,6 +10,7 @@ import type { AccountRecord } from '@/db/records';
 import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
 import { t } from '@/i18n';
+import { trackOnce } from '@/lib/analytics';
 
 const TYPES: readonly { value: AccountType; label: string }[] = (['chequing', 'savings', 'cash'] as const).map((value) => ({
   value,
@@ -43,7 +44,10 @@ function AccountForm({ account, count }: FormData) {
     if (!valid || balance === null) return;
     try {
       if (account) await updateAccount(db, account.id, { name: name.trim(), type, balance });
-      else await createAccount(db, { name: name.trim(), type, balance });
+      else {
+        await createAccount(db, { name: name.trim(), type, balance });
+        trackOnce('first_balance');
+      }
       router.back();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

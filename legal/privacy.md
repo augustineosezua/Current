@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Effective date: November 17, 2026 · Version 2.1
+Effective date: November 18, 2026 · Version 2.2
 
 > No account. No bank login. Your budget lives on your phone, and we don't have a copy of it.
 
@@ -34,6 +34,8 @@ If we ever offer AI that runs on a server, it will be optional and off until you
 
 To learn which features work, the App sends anonymous usage events to our analytics provider. Events are tied to a random install ID, not to your name, email or device identifiers. Examples include "first transaction logged", "bill added" and "paywall shown". They **never** include amounts, merchant names, notes or account names. We don't record your screen or sessions.
 
+Our analytics provider is PostHog. It stores these events on servers in the United States, so they may be processed outside Canada and be subject to the laws of that country. We have turned off IP-based location and set PostHog not to keep IP addresses; each event carries only your phone's region setting (for example, Canada).
+
 ## 4. Purchases
 
 Current Plus is sold through Apple. Apple processes your payment, and we never see your card details. We use RevenueCat to check whether your subscription is active. RevenueCat receives an anonymous app user ID and purchase receipts from Apple, but no budget data.
@@ -48,7 +50,7 @@ Reminders and summaries are scheduled locally on your phone. We don't send them,
 
 ## 7. Sharing
 
-We don't sell or rent your information. The only third parties involved are the ones named above (Apple, RevenueCat and our analytics provider), each acting on our behalf, plus anyone we're legally required to disclose information to. Since we don't hold your budget data, we have none of it to share.
+We don't sell or rent your information. The only third parties involved are the ones named above (Apple, RevenueCat and PostHog), each acting on our behalf, plus anyone we're legally required to disclose information to. Since we don't hold your budget data, we have none of it to share.
 
 ## 8. Your rights
 

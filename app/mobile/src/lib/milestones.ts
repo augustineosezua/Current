@@ -8,6 +8,7 @@ import { isCheckInEntry } from '@/db/ledger';
 import { saveSetting } from '@/db/plan';
 import * as repo from '@/db/repo';
 
+import { trackOnce } from './analytics';
 import { isPlusNow, purchasesAvailable } from './plus';
 
 const TRIAL_AFTER_LOGGED = 5;
@@ -35,6 +36,9 @@ async function trialDue(db: SQLiteDatabase, trigger: 'logged' | 'termPlan'): Pro
 
 // after a new entry is logged: maybe offer the trial, otherwise maybe ask for a review
 export async function afterLogged(db: SQLiteDatabase, now = new Date()): Promise<Milestone> {
+  const logged = await countLogged(db);
+  if (logged >= 1) trackOnce('first_transaction');
+  if (logged >= TRIAL_AFTER_LOGGED) trackOnce('activated', { via: 'logged' });
   if (await trialDue(db, 'logged')) return 'trial';
   const settings = await repo.getSettings(db);
   if (settings.reviewAskedAt) return null;
@@ -48,5 +52,7 @@ export async function afterLogged(db: SQLiteDatabase, now = new Date()): Promise
 
 // after the first semester plan is saved: maybe offer the trial
 export async function afterTermPlan(db: SQLiteDatabase): Promise<Milestone> {
+  trackOnce('first_term_plan');
+  trackOnce('activated', { via: 'term_plan' });
   return (await trialDue(db, 'termPlan')) ? 'trial' : null;
 }

@@ -11,6 +11,7 @@ import { AmountField, Button, Chips, Field } from '@/components/form';
 import { completeOnboarding, type BillInput } from '@/db/ledger';
 import { requestReminderPermission } from '@/lib/reminders';
 import { t } from '@/i18n';
+import { track, trackOnce } from '@/lib/analytics';
 import { dayLabel, frequencyLabel, money } from '@/lib/format';
 
 const StyledSafeAreaView = withUniwind(SafeAreaView);
@@ -68,6 +69,10 @@ export default function OnboardingScreen() {
         income: hasIncome ? { amount: pay, frequency: payFrequency, nextPaymentDate: payDate } : null,
         bills: draftBill ? [...bills, draftBill] : bills,
       });
+      const billCount = bills.length + (draftBill ? 1 : 0);
+      track('onboarding_done', { hasIncome, bills: billCount });
+      trackOnce('first_balance');
+      if (billCount > 0) trackOnce('first_bill');
       // with a bill to remind about, this is the moment the notification prompt makes sense
       if (draftBill || bills.length > 0) void requestReminderPermission().catch(() => {});
       router.replace('/');

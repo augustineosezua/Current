@@ -15,6 +15,7 @@ import * as repo from '@/db/repo';
 import { useLiveQuery } from '@/hooks/use-live-query';
 import { categoriesFor, suggestCategoryId } from '@/lib/categories';
 import { t } from '@/i18n';
+import { trackOnce } from '@/lib/analytics';
 import { frequencyLabel, money } from '@/lib/format';
 
 const REPEATS: readonly { value: Frequency; label: string }[] = (
@@ -76,7 +77,10 @@ function BillForm({ bill, accounts, categories }: FormData) {
       if (!valid) return;
       const input = { name: name.trim(), amount, dueDate, frequency, accountId: bill?.accountId, categoryId };
       if (bill) await updateBill(db, bill.id, input);
-      else await createBill(db, input);
+      else {
+        await createBill(db, input);
+        trackOnce('first_bill');
+      }
     });
 
   // log the payment and offer to undo it

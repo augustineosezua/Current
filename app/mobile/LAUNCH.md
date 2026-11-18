@@ -10,6 +10,8 @@ The app reads these at build time. Set them as EAS environment variables (or in 
 |---|---|
 | `EXPO_PUBLIC_REVENUECAT_IOS_KEY` | RevenueCat's **public** Apple API key (starts `appl_`). Without it, Plus can't be bought and the app runs as Free. |
 | `EXPO_PUBLIC_PRIVACY_URL` | Public privacy policy URL, linked from the paywall. Apple requires it, along with the terms link, which already points to Apple's standard EULA. |
+| `EXPO_PUBLIC_POSTHOG_KEY` | PostHog project API key (starts `phc_`, public by design). Without it, analytics is off. Events are skipped in development builds unless `EXPO_PUBLIC_ANALYTICS_IN_DEV=1`. |
+| `EXPO_PUBLIC_POSTHOG_HOST` | Optional. Defaults to `https://us.i.posthog.com`; use `https://eu.i.posthog.com` for an EU project. |
 
 **AI is on-device only for now** (decided November 17, 2026). Nothing needs deploying: there's no server and no Anthropic key. The cloud fallback proxy (`app/api/src/ai`, `npm run start:ai`) stays in the repo, parked, and `CLOUD_AI_ENABLED` in `src/ai/index.ts` is `false`. Turning it on later means deploying the proxy with `ANTHROPIC_API_KEY` and `REVENUECAT_SECRET_KEY`, setting `EXPO_PUBLIC_AI_PROXY_URL`, flipping the flag, and restoring the cloud AI section of the privacy policy before release.
 
@@ -24,7 +26,7 @@ The app reads these at build time. Set them as EAS environment variables (or in 
    Set Canada as the base storefront and let Apple generate the other prices. No lifetime product.
 3. In RevenueCat, create an entitlement with the identifier **`plus`**, attach both products, and make a **current offering** with the standard `$rc_monthly` and `$rc_annual` packages. The paywall reads those two packages.
 4. RevenueCat pricing (checked November 17, 2026, from secondary sources that disagree): most say it's free below US$2,500 a month in tracked revenue, then 1% of all of it. The roadmap's target for May 2028 is about $900 a month. Confirm the figure on RevenueCat's own pricing page.
-5. The privacy policy already covers purchases (Apple and RevenueCat) and on-device AI (version 2.1, `legal/privacy.md`). Publish it and use its URL for `EXPO_PUBLIC_PRIVACY_URL`. After editing the Markdown, rebuild the PDFs with `python legal/build_pdfs.py` (needs `fpdf2`).
+5. The privacy policy already covers purchases (Apple and RevenueCat) and on-device AI, and names PostHog for analytics (version 2.2, `legal/privacy.md`). Publish it and use its URL for `EXPO_PUBLIC_PRIVACY_URL`. After editing the Markdown, rebuild the PDFs with `python legal/build_pdfs.py` (needs `fpdf2`).
 
 The trial is offered once, at activation (after the 5th logged entry or the first semester plan), never at first launch. The App Store review prompt comes after the 10th logged entry, never during onboarding and never within a day of a paywall.
 

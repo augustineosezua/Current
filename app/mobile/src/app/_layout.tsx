@@ -13,8 +13,10 @@ import { PlusSync } from '@/components/plus-sync';
 import { ReminderSync } from '@/components/reminder-sync';
 import { ToastProvider } from '@/components/toast';
 import { migrateDbIfNeeded } from '@/db/migrate';
+import { initAnalytics } from '@/lib/analytics';
 
 SplashScreen.preventAutoHideAsync();
+initAnalytics();
 
 // app root: fonts, local database, tabs with the form sheets, settings and first-run setup on top
 export default function RootLayout() {
