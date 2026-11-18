@@ -25,3 +25,91 @@ body {
   color: var(--foreground);
   font-family: var(--font-manrope);
 }
+
+/* Sticker Book: the mobile app's look (app/mobile/DESIGN.md), used by the support and coming-soon pages */
+.sticker-site {
+  --st-bg: #fbf5ec;
+  --st-card: #ffffff;
+  --st-field: #efe6da;
+  --st-ink: #2a2420;
+  --st-muted: #6e625a;
+  --st-ledge: rgba(42, 36, 32, 0.1);
+  --st-glow: rgba(42, 36, 32, 0.08);
+  --st-cta: #2a2420;
+  --st-on-cta: #ffffff;
+  --st-brand: #ff7a59;
+  --st-on-brand: #2a1008;
+  --st-good: #cdefd9;
+  --st-on-good: #0f3d22;
+  --st-peach: #ffd9c7;
+  --st-sky: #cfe6ff;
+  --st-lilac: #e3d9ff;
+  --st-butter: #fff0a8;
+  --st-mint: #cdefd9;
+  --st-edge: #ffffff;
+  background: var(--st-bg);
+  color: var(--st-ink);
+  font-family: var(--font-nunito), ui-rounded, system-ui, sans-serif;
+  font-weight: 500;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sticker-site {
+    --st-bg: #1c1916;
+    --st-card: #2a2521;
+    --st-field: #352f2a;
+    --st-ink: #f6efe6;
+    --st-muted: #b5a99c;
+    --st-ledge: rgba(0, 0, 0, 0.35);
+    --st-glow: rgba(0, 0, 0, 0.3);
+    --st-cta: #f6efe6;
+    --st-on-cta: #1c1916;
+    --st-good: #1f3b2b;
+    --st-on-good: #a7f3c4;
+    --st-edge: #3a332d;
+  }
+}
+
+.sticker-site .st-display {
+  font-family: var(--font-fredoka), ui-rounded, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* soft ledge under cards: a short 3px shadow plus a wide faint blur */
+.sticker-site .st-raised {
+  background: var(--st-card);
+  box-shadow: 0 3px 0 var(--st-ledge), 0 12px 32px var(--st-glow);
+}
+
+/* emoji on a die-cut sticker with a white edge */
+.sticker-site .st-sticker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--st-edge);
+  box-shadow: 0 2px 0 var(--st-ledge);
+  border-radius: 9999px;
+}
+
+.sticker-site .st-button {
+  background: var(--st-cta);
+  color: var(--st-on-cta);
+  box-shadow: 0 3px 0 var(--st-ledge), 0 12px 32px var(--st-glow);
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+}
+.sticker-site .st-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--st-ledge), 0 6px 16px var(--st-glow);
+}
+
+.sticker-site a:focus-visible,
+.sticker-site summary:focus-visible {
+  outline: 2px solid var(--st-ink);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticker-site .st-button { transition: none; }
+}

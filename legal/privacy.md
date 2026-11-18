@@ -68,7 +68,7 @@ If we change this policy in a material way, for example when optional cloud sync
 
 | | |
 |---|---|
-| Privacy | privacy@current.app |
-| Support | support@current.app |
+| Privacy | privacy@aosezua.dev |
+| Support | support@aosezua.dev |
 | Regulator (OPC) | www.priv.gc.ca |
 | Based in | Ontario, Canada |

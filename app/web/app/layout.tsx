@@ -27,7 +27,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "Current",
-  description: "Your personal finance dashboard",
+  description: "A student budget app for iPhone. No account, no bank login."
 };
 
 export default function RootLayout({

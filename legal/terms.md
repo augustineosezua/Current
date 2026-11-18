@@ -62,6 +62,6 @@ These Terms are governed by the laws of the Province of Ontario and the federal 
 | | |
 |---|---|
 | Product | Current |
-| Support | support@current.app |
-| Legal | legal@current.app |
+| Support | support@aosezua.dev |
+| Legal | legal@aosezua.dev |
 | Based in | Ontario, Canada |
